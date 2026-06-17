@@ -59,23 +59,32 @@ No network calls beyond the Claude API request. No signing keypair is required �
 ### `extractor.ts`
 - Exports `extractStrategy(goal: string): Promise<RawStrategy>`.
 - One `client.messages.create()` call using `output_config: { format: { type: "json_schema", schema: POLICY_STRATEGY_SCHEMA } }`.
-- System prompt explains the PolicyObject domain (budget, max single tx, allowed protocols, expiry) so Claude maps loose phrasing into the right fields, but does not invent unstated values — the schema marks fields nullable, and nulls become validator errors, not guesses.
+- `RawStrategy` fields (all nullable — null means "not stated in the goal"):
+  - `agentAddress: string | null` — the agent's Sui address. Must appear explicitly in the goal text (e.g. "for agent 0xabc...123"); IntentFlow never invents or looks up an address.
+  - `maxTotalBudget: number | null`
+  - `maxSingleTx: number | null`
+  - `allowedProtocols: string[] | null`
+  - `expiresInDays: number | null` — a **relative** duration, not an absolute timestamp. The LLM has no reliable notion of "now," so it extracts "expires in 30 days" as `30`, never as a computed epoch millisecond value.
+- System prompt explains the PolicyObject domain (budget, max single tx, allowed protocols, expiry) so Claude maps loose phrasing into the right fields, but does not invent unstated values — null reaching the validator becomes an error, not a guess.
 - A `stop_reason: "refusal"` is treated as an extraction failure (see Error Handling).
 - Returns raw, untrusted JSON — the validator is the only gate that matters.
 
 ### `validator.ts`
-- Exports `validateStrategy(raw: RawStrategy): ValidationResult`, a discriminated union:
+- Exports `validateStrategy(raw: RawStrategy, nowMs: number): ValidationResult`, a discriminated union:
   `{ ok: true, strategy: PolicyStrategy } | { ok: false, errors: FieldError[] }`.
-- Re-implements (in TypeScript, no on-chain call) the exact checks `policy.move::create_policy` enforces:
-  - `max_total_budget > 0`
-  - `0 < max_single_tx <= max_total_budget`
-  - `allowed_protocols` non-empty
-  - `expires_at_ms` strictly in the future
-- Each failure names the field and reason (e.g. `max_single_tx (150) exceeds max_total_budget (100)`) so the CLI can print something actionable instead of waiting for an on-chain abort code.
+- `nowMs` is captured once by the caller (`index.ts`, via `Date.now()`) and threaded in explicitly rather than read inside the validator — keeps the function pure and deterministic for testing, and guarantees the same "now" is used to compute `expiresAtMs` as is later embedded in the PTB.
+- First checks every field is non-null (each null produces its own `FieldError`, e.g. `{ field: "agentAddress", reason: "not specified in goal" }`).
+- Converts `expiresInDays` to an absolute `expiresAtMs = nowMs + expiresInDays * 86_400_000` as part of building the validated `PolicyStrategy`.
+- Then re-implements (in TypeScript, no on-chain call) the exact checks `policy.move::create_policy` enforces:
+  - `maxTotalBudget > 0`
+  - `0 < maxSingleTx <= maxTotalBudget`
+  - `allowedProtocols` non-empty
+  - `expiresInDays > 0` (so the derived `expiresAtMs` is strictly in the future)
+- Each failure names the field and reason (e.g. `maxSingleTx (150) exceeds maxTotalBudget (100)`) so the CLI can print something actionable instead of waiting for an on-chain abort code.
 
 ### `ptbBuilder.ts`
 - Exports `buildCreatePolicyPtb(strategy: PolicyStrategy, packageId: string): Transaction`.
-- Uses `@mysten/sui/transactions` `Transaction.moveCall` targeting `${packageId}::policy::create_policy` with args in the exact order the Move function expects: agent, max_total_budget, max_single_tx, allowed_protocols, expires_at_ms, clock.
+- Uses `@mysten/sui/transactions` `Transaction.moveCall` targeting `${packageId}::policy::create_policy` with args in the exact order the Move function expects: `agentAddress`, `maxTotalBudget`, `maxSingleTx`, `allowedProtocols`, `expiresAtMs`, clock.
 - `packageId` is supplied by the caller (env var / config) — the contract has not been published to any network yet, so this stays a placeholder.
 
 ### `index.ts`
@@ -86,7 +95,7 @@ No network calls beyond the Claude API request. No signing keypair is required �
 
 ## Data Flow & Error Handling
 
-**Happy path:** goal → `extractStrategy` → `validateStrategy` → `buildCreatePolicyPtb` → `{ strategy, ptbBytes }`.
+**Happy path:** goal → `extractStrategy` → `validateStrategy(raw, Date.now())` → `buildCreatePolicyPtb` → `{ strategy, ptbBytes }`.
 
 **Error paths** — every failure is a typed result; exceptions do not cross module boundaries except for genuine infra failures:
 
@@ -94,7 +103,7 @@ No network calls beyond the Claude API request. No signing keypair is required �
 |---|---|---|
 | Claude API error (network, rate limit, auth) | `extractStrategy` | Anthropic SDK typed error propagates to the CLI's top-level catch (infra failure, not user-input problem) |
 | `stop_reason: "refusal"` | `extractStrategy` | `{ ok: false, errors: [{ field: "_root", reason: "could not parse goal" }] }` |
-| Schema-valid JSON but missing/null required field | `validateStrategy` | `FieldError` naming the field, e.g. `{ field: "max_total_budget", reason: "not specified in goal" }` |
+| Schema-valid JSON but missing/null required field | `validateStrategy` | `FieldError` naming the field, e.g. `{ field: "maxTotalBudget", reason: "not specified in goal" }` |
 | Schema-valid JSON but business-rule violation | `validateStrategy` | `FieldError` with the offending values |
 | Goal text unrelated to policy setup | `extractStrategy` returns all-null fields | Falls through to the same missing-field errors in `validateStrategy` |
 
@@ -102,7 +111,7 @@ The CLI's only job on failure is to print the `errors` array and exit 1. No retr
 
 ## Testing
 
-- **`validator.test.ts`** — pure unit tests, no mocking. Covers every boundary the Move contract's own test suite covers conceptually: zero budget, single_tx > budget, single_tx == budget (boundary success), empty protocols, past expiry, all-fields-valid.
+- **`validator.test.ts`** — pure unit tests, no mocking, fixed `nowMs`. Covers every boundary the Move contract's own test suite covers conceptually: zero budget, single_tx > budget, single_tx == budget (boundary success), empty protocols, `expiresInDays` <= 0, each field null in turn, all-fields-valid (asserting the derived `expiresAtMs` equals `nowMs + days * 86_400_000`).
 - **`ptbBuilder.test.ts`** — given a fixed valid `PolicyStrategy`, asserts the built `Transaction` contains exactly one `moveCall` with the right target and argument order/types. No network calls.
 - **`extractor.test.ts`** — mocks `client.messages.create` (no real API calls in CI/tests) across representative goal strings, including a refusal case and an all-nulls case.
 - **`index.test.ts`** — integration test composing real `validateStrategy`/`buildCreatePolicyPtb` with a mocked `extractStrategy`: one full happy path, one full rejected-at-validation path.
