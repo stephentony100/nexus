@@ -117,16 +117,43 @@ module nexus_agent_wallet::policy {
         transfer::share_object(policy);
     }
 
-    public entry fun pause_policy(_policy: &mut PolicyObject, _clock: &Clock, _ctx: &TxContext) {
-        abort ENotOwner
+    public entry fun pause_policy(policy: &mut PolicyObject, clock: &Clock, ctx: &TxContext) {
+        assert_owner(policy, ctx);
+        assert!(!policy.revoked, EPolicyRevoked);
+
+        policy.paused = true;
+
+        event::emit(PolicyPaused {
+            policy_id: object::uid_to_address(&policy.id),
+            owner: policy.owner,
+            timestamp_ms: clock::timestamp_ms(clock),
+        });
     }
 
-    public entry fun resume_policy(_policy: &mut PolicyObject, _clock: &Clock, _ctx: &TxContext) {
-        abort ENotOwner
+    public entry fun resume_policy(policy: &mut PolicyObject, clock: &Clock, ctx: &TxContext) {
+        assert_owner(policy, ctx);
+        assert!(!policy.revoked, EPolicyRevoked);
+        assert_not_expired(policy, clock);
+
+        policy.paused = false;
+
+        event::emit(PolicyResumed {
+            policy_id: object::uid_to_address(&policy.id),
+            owner: policy.owner,
+            timestamp_ms: clock::timestamp_ms(clock),
+        });
     }
 
-    public entry fun revoke_policy(_policy: &mut PolicyObject, _clock: &Clock, _ctx: &TxContext) {
-        abort ENotOwner
+    public entry fun revoke_policy(policy: &mut PolicyObject, clock: &Clock, ctx: &TxContext) {
+        assert_owner(policy, ctx);
+
+        policy.revoked = true;
+
+        event::emit(PolicyRevoked {
+            policy_id: object::uid_to_address(&policy.id),
+            owner: policy.owner,
+            timestamp_ms: clock::timestamp_ms(clock),
+        });
     }
 
     public entry fun record_action(
@@ -164,6 +191,18 @@ module nexus_agent_wallet::policy {
 
     public fun is_protocol_allowed(policy: &PolicyObject, protocol_id: &vector<u8>): bool {
         vector::contains(&policy.allowed_protocols, protocol_id)
+    }
+
+    fun assert_owner(policy: &PolicyObject, ctx: &TxContext) {
+        assert!(tx_context::sender(ctx) == policy.owner, ENotOwner);
+    }
+
+    fun assert_agent(policy: &PolicyObject, ctx: &TxContext) {
+        assert!(tx_context::sender(ctx) == policy.agent, ENotAgent);
+    }
+
+    fun assert_not_expired(policy: &PolicyObject, clock: &Clock) {
+        assert!(clock::timestamp_ms(clock) <= policy.expires_at_ms, EPolicyExpired);
     }
 
     #[test_only]

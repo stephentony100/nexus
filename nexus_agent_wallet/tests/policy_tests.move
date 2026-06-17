@@ -112,4 +112,77 @@ module nexus_agent_wallet::policy_tests {
         clock::destroy_for_testing(clock);
         test::end(scenario);
     }
+
+    #[test]
+    fun owner_can_pause_resume_and_revoke_policy() {
+        let mut scenario = test::begin(OWNER);
+        let mut clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(AGENT, 500, 100, protocols(), 31_000, &clock, test::ctx(&mut scenario));
+
+        test::next_tx(&mut scenario, OWNER);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+
+        policy::pause_policy(&mut policy_obj, &clock, test::ctx(&mut scenario));
+        assert!(policy::paused(&policy_obj), 0);
+
+        policy::resume_policy(&mut policy_obj, &clock, test::ctx(&mut scenario));
+        assert!(!policy::paused(&policy_obj), 1);
+
+        policy::revoke_policy(&mut policy_obj, &clock, test::ctx(&mut scenario));
+        assert!(policy::revoked(&policy_obj), 2);
+
+        test::return_shared(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test, expected_failure(abort_code = 4)]
+    fun non_owner_cannot_pause_policy() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(AGENT, 500, 100, protocols(), 31_000, &clock, test::ctx(&mut scenario));
+
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::pause_policy(&mut policy_obj, &clock, test::ctx(&mut scenario));
+
+        test::return_shared(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test, expected_failure(abort_code = 4)]
+    fun non_owner_cannot_resume_policy() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(AGENT, 500, 100, protocols(), 31_000, &clock, test::ctx(&mut scenario));
+
+        test::next_tx(&mut scenario, OWNER);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::pause_policy(&mut policy_obj, &clock, test::ctx(&mut scenario));
+        test::return_shared(policy_obj);
+
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::resume_policy(&mut policy_obj, &clock, test::ctx(&mut scenario));
+
+        test::return_shared(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test, expected_failure(abort_code = 4)]
+    fun non_owner_cannot_revoke_policy() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(AGENT, 500, 100, protocols(), 31_000, &clock, test::ctx(&mut scenario));
+
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::revoke_policy(&mut policy_obj, &clock, test::ctx(&mut scenario));
+
+        test::return_shared(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
 }
