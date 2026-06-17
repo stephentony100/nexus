@@ -342,4 +342,41 @@ module nexus_agent_wallet::policy_tests {
         clock::destroy_for_testing(clock);
         test::end(scenario);
     }
+
+    #[test]
+    fun amount_equal_to_single_tx_limit_succeeds() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(AGENT, 500, 100, protocols(), 31_000, &clock, test::ctx(&mut scenario));
+
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+
+        policy::record_action(&mut policy_obj, b"scallop", 100, walrus_blob(), &clock, test::ctx(&mut scenario));
+
+        assert!(policy::spent_total(&policy_obj) == 100, 0);
+
+        test::return_shared(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test]
+    fun cumulative_amount_equal_to_total_budget_succeeds() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(AGENT, 150, 100, protocols(), 31_000, &clock, test::ctx(&mut scenario));
+
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+
+        policy::record_action(&mut policy_obj, b"scallop", 100, walrus_blob(), &clock, test::ctx(&mut scenario));
+        policy::record_action(&mut policy_obj, b"deepbook", 50, walrus_blob(), &clock, test::ctx(&mut scenario));
+
+        assert!(policy::spent_total(&policy_obj) == 150, 0);
+
+        test::return_shared(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
 }
