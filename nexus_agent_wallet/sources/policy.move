@@ -157,14 +157,34 @@ module nexus_agent_wallet::policy {
     }
 
     public entry fun record_action(
-        _policy: &mut PolicyObject,
-        _protocol_id: vector<u8>,
-        _amount: u64,
-        _walrus_blob_id: vector<u8>,
-        _clock: &Clock,
-        _ctx: &TxContext,
+        policy: &mut PolicyObject,
+        protocol_id: vector<u8>,
+        amount: u64,
+        walrus_blob_id: vector<u8>,
+        clock: &Clock,
+        ctx: &TxContext,
     ) {
-        abort ENotAgent
+        assert_agent(policy, ctx);
+        assert!(!policy.paused, EPolicyPaused);
+        assert!(!policy.revoked, EPolicyRevoked);
+        assert_not_expired(policy, clock);
+        assert!(is_protocol_allowed(policy, &protocol_id), EProtocolNotAllowed);
+        assert!(amount > 0, EZeroAmount);
+        assert!(amount <= policy.max_single_tx, ESingleTxLimitExceeded);
+
+        let new_spent_total = policy.spent_total + amount;
+        assert!(new_spent_total <= policy.max_total_budget, ETotalBudgetExceeded);
+        policy.spent_total = new_spent_total;
+
+        event::emit(ActionRecorded {
+            policy_id: object::uid_to_address(&policy.id),
+            agent: policy.agent,
+            protocol_id,
+            amount,
+            spent_total: new_spent_total,
+            walrus_blob_id,
+            timestamp_ms: clock::timestamp_ms(clock),
+        });
     }
 
     public fun owner(policy: &PolicyObject): address { policy.owner }
