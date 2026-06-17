@@ -1,3 +1,4 @@
+#[allow(duplicate_alias, lint(public_entry))]
 module nexus_agent_wallet::policy {
     use std::vector;
     use sui::clock::{Self, Clock};
