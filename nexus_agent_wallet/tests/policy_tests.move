@@ -210,4 +210,136 @@ module nexus_agent_wallet::policy_tests {
         clock::destroy_for_testing(clock);
         test::end(scenario);
     }
+
+    #[test, expected_failure(abort_code = 5)]
+    fun wrong_agent_cannot_record_action() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(AGENT, 500, 100, protocols(), 31_000, &clock, test::ctx(&mut scenario));
+
+        test::next_tx(&mut scenario, @0xBAD);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::record_action(&mut policy_obj, b"scallop", 75, walrus_blob(), &clock, test::ctx(&mut scenario));
+
+        policy::destroy_for_testing(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test, expected_failure(abort_code = 9)]
+    fun disallowed_protocol_is_rejected() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(AGENT, 500, 100, protocols(), 31_000, &clock, test::ctx(&mut scenario));
+
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::record_action(&mut policy_obj, b"unknown", 75, walrus_blob(), &clock, test::ctx(&mut scenario));
+
+        policy::destroy_for_testing(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test, expected_failure(abort_code = 10)]
+    fun zero_amount_is_rejected() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(AGENT, 500, 100, protocols(), 31_000, &clock, test::ctx(&mut scenario));
+
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::record_action(&mut policy_obj, b"scallop", 0, walrus_blob(), &clock, test::ctx(&mut scenario));
+
+        policy::destroy_for_testing(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test, expected_failure(abort_code = 11)]
+    fun amount_over_single_tx_limit_is_rejected() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(AGENT, 500, 100, protocols(), 31_000, &clock, test::ctx(&mut scenario));
+
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::record_action(&mut policy_obj, b"scallop", 101, walrus_blob(), &clock, test::ctx(&mut scenario));
+
+        policy::destroy_for_testing(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test, expected_failure(abort_code = 12)]
+    fun cumulative_amount_over_total_budget_is_rejected() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(AGENT, 150, 100, protocols(), 31_000, &clock, test::ctx(&mut scenario));
+
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::record_action(&mut policy_obj, b"scallop", 100, walrus_blob(), &clock, test::ctx(&mut scenario));
+        policy::record_action(&mut policy_obj, b"deepbook", 51, walrus_blob(), &clock, test::ctx(&mut scenario));
+
+        policy::destroy_for_testing(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test, expected_failure(abort_code = 8)]
+    fun expired_policy_rejects_actions() {
+        let mut scenario = test::begin(OWNER);
+        let mut clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(AGENT, 500, 100, protocols(), 31_000, &clock, test::ctx(&mut scenario));
+        clock::set_for_testing(&mut clock, 31_001);
+
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::record_action(&mut policy_obj, b"scallop", 75, walrus_blob(), &clock, test::ctx(&mut scenario));
+
+        policy::destroy_for_testing(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test, expected_failure(abort_code = 6)]
+    fun paused_policy_rejects_actions() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(AGENT, 500, 100, protocols(), 31_000, &clock, test::ctx(&mut scenario));
+
+        test::next_tx(&mut scenario, OWNER);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::pause_policy(&mut policy_obj, &clock, test::ctx(&mut scenario));
+        test::return_shared(policy_obj);
+
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::record_action(&mut policy_obj, b"scallop", 75, walrus_blob(), &clock, test::ctx(&mut scenario));
+
+        policy::destroy_for_testing(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test, expected_failure(abort_code = 7)]
+    fun revoked_policy_rejects_actions() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(AGENT, 500, 100, protocols(), 31_000, &clock, test::ctx(&mut scenario));
+
+        test::next_tx(&mut scenario, OWNER);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::revoke_policy(&mut policy_obj, &clock, test::ctx(&mut scenario));
+        test::return_shared(policy_obj);
+
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::record_action(&mut policy_obj, b"scallop", 75, walrus_blob(), &clock, test::ctx(&mut scenario));
+
+        policy::destroy_for_testing(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
 }
