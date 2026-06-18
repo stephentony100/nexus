@@ -61,7 +61,8 @@ Checks in order, mirroring `validateAction`'s own ordering:
 2. `state.revoked` → skip, reason `"policy is revoked"`.
 3. `nowMs > state.expiresAtMs` → skip, reason `"policy expired at <expiresAtMs>"`.
 4. `state.spentTotal >= state.maxTotalBudget` → skip, reason `"budget exhausted"`.
-5. Otherwise → propose `{protocol: state.allowedProtocols[0], amount: Math.min(state.maxTotalBudget - state.spentTotal, state.maxSingleTx)}`.
+5. `state.allowedProtocols.length === 0` → skip, reason `"no allowed protocols"`. (The Move contract's `EEmptyProtocolList` assert prevents this at policy creation, but the check costs nothing and removes any reliance on that invariant holding for `decidePolicyAction` to be safe.)
+6. Otherwise → propose `{protocol: state.allowedProtocols[0], amount: Math.min(state.maxTotalBudget - state.spentTotal, state.maxSingleTx)}`.
 
 `protocol`/`amount` match ActionFlow's existing `PolicyAction`/`RawActionGoal` convention (`protocol: string`, `amount: number`) — these are policy-level budget numbers already represented as `number` throughout ActionFlow, not raw on-chain u64 event values, so they don't carry the float-precision risk that motivated `string` typing in AgentRunner's `ActionRecordedEvent`.
 
@@ -87,11 +88,11 @@ export type PolicyLoopResult =
 export async function runPolicyCycle(opts: PolicyLoopOptions): Promise<PolicyLoopResult>
 ```
 
-`runPolicyCycle` composes, in order: `fetchPolicyState(opts.policyId, suiClient)` → `decidePolicyAction(state, Date.now())` → if `skip`, return `{ok: true, status: 'skipped', reason}` immediately, without calling `validateAction`, building anything, or touching the signer → if `propose`, call `validateAction({protocol, amount}, state, Date.now(), opts.policyId)` (note: `validateAction` takes a `RawActionGoal`-shaped object; `{protocol, amount}` from a `propose` decision satisfies that shape directly) → if invalid, return `{ok: false, status: 'validation_failed', errors}` → `buildRecordActionPtb(validated.action, opts.walrusBlobId, opts.packageId)` → `loadAgentKeypair()` if `opts.signer` not given → `tx.setSender(signer.toSuiAddress())` → `submitTransaction(tx, signer, suiClient)`, returning its result as-is.
+`runPolicyCycle` captures a single `const nowMs = Date.now()` at the top and passes that same value to both `decidePolicyAction` and `validateAction`, so the two checks agree on "now" within one cycle rather than drifting across two separate clock reads. It composes, in order: `fetchPolicyState(opts.policyId, suiClient)` → `decidePolicyAction(state, nowMs)` → if `skip`, return `{ok: true, status: 'skipped', reason}` immediately, without calling `validateAction`, building anything, or touching the signer → if `propose`, call `validateAction({protocol, amount}, state, nowMs, opts.policyId)` (note: `validateAction` takes a `RawActionGoal`-shaped object; `{protocol, amount}` from a `propose` decision satisfies that shape directly) → if invalid, return `{ok: false, status: 'validation_failed', errors}` → `buildRecordActionPtb(validated.action, opts.walrusBlobId, opts.packageId)` → `loadAgentKeypair()` if `opts.signer` not given → `tx.setSender(signer.toSuiAddress())` → `submitTransaction(tx, signer, suiClient)`, returning its result as-is.
 
 ### `policyloop/bin/policyloop.ts`
 
-Reuses AgentRunner's exact env var names: `ACTIONFLOW_POLICY_ID`, `ACTIONFLOW_PACKAGE_ID`, `ACTIONFLOW_WALRUS_BLOB_ID`, `AGENTRUNNER_PRIVATE_KEY`. Runs exactly one cycle via `runPolicyCycle`, prints the result, exits 0 for `succeeded`/`skipped`, exits 1 for any other status. No goal argument (unlike AgentRunner's CLI) — there is nothing for a human to type.
+Reuses AgentRunner's exact env var names: `ACTIONFLOW_POLICY_ID`, `ACTIONFLOW_PACKAGE_ID`, `ACTIONFLOW_WALRUS_BLOB_ID`, `AGENTRUNNER_PRIVATE_KEY`. All four are checked upfront, before calling `runPolicyCycle`, exactly like AgentRunner's CLI does — even though a `skipped` cycle technically never touches the signer, checking upfront keeps the CLI's env-var contract simple and consistent with AgentRunner's, and fails fast on a misconfigured deployment rather than only on whichever cycle happens to first decide to act. Runs exactly one cycle via `runPolicyCycle`, prints the result, exits 0 for `succeeded`/`skipped`, exits 1 for any other status. No goal argument (unlike AgentRunner's CLI) — there is nothing for a human to type.
 
 ## Data Flow & Error Handling
 
@@ -107,7 +108,7 @@ Reuses AgentRunner's exact env var names: `ACTIONFLOW_POLICY_ID`, `ACTIONFLOW_PA
 
 ## Testing
 
-- `decision.test.ts` — the bulk of real coverage: paused, revoked, expired, budget-exhausted, normal-propose (verifies it picks `allowedProtocols[0]` and `amount = min(remaining, maxSingleTx)`), and the boundary case where remaining budget is less than `maxSingleTx`.
+- `decision.test.ts` — the bulk of real coverage: paused, revoked, expired, budget-exhausted, empty-allowed-protocols, normal-propose (verifies it picks `allowedProtocols[0]` and `amount = min(remaining, maxSingleTx)`), and the boundary case where remaining budget is less than `maxSingleTx`.
 - `index.test.ts` — mocks `actionflow`'s and `agentrunner`'s named exports (same `vi.mock` pattern AgentRunner's own `index.test.ts` already uses for `actionflow`), verifying: the skip case short-circuits before any validation/build/signing call; the happy-path wiring sets the sender correctly and passes the right arguments through to `submitTransaction`.
 - CLI — manually verified (no automated test), matching AgentRunner's CLI convention.
 
