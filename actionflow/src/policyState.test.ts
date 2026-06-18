@@ -124,4 +124,76 @@ describe('fetchPolicyState', () => {
 
     await expect(fetchPolicyState('0xpolicy', client)).rejects.toThrow(PolicyFetchError)
   })
+
+  it('throws PolicyFetchError when agent is not a string', async () => {
+    const client = mockClient({
+      data: {
+        objectId: '0xpolicy',
+        content: {
+          dataType: 'moveObject',
+          type: '0x123::policy::PolicyObject',
+          fields: {
+            agent: undefined,
+            max_total_budget: '500',
+            spent_total: '100',
+            max_single_tx: '100',
+            allowed_protocols: [scallopBytes()],
+            expires_at_ms: '1700000000000',
+            paused: false,
+            revoked: false,
+          },
+        },
+      },
+    })
+
+    await expect(fetchPolicyState('0xpolicy', client)).rejects.toThrow(PolicyFetchError)
+  })
+
+  it('throws PolicyFetchError when a u64 field exceeds safe integer precision', async () => {
+    const client = mockClient({
+      data: {
+        objectId: '0xpolicy',
+        content: {
+          dataType: 'moveObject',
+          type: '0x123::policy::PolicyObject',
+          fields: {
+            agent: '0xagent',
+            max_total_budget: '18446744073709551615',
+            spent_total: '100',
+            max_single_tx: '100',
+            allowed_protocols: [scallopBytes()],
+            expires_at_ms: '1700000000000',
+            paused: false,
+            revoked: false,
+          },
+        },
+      },
+    })
+
+    await expect(fetchPolicyState('0xpolicy', client)).rejects.toThrow(PolicyFetchError)
+  })
+
+  it('throws PolicyFetchError when a u64 field is missing (would otherwise be NaN)', async () => {
+    const client = mockClient({
+      data: {
+        objectId: '0xpolicy',
+        content: {
+          dataType: 'moveObject',
+          type: '0x123::policy::PolicyObject',
+          fields: {
+            agent: '0xagent',
+            max_total_budget: undefined,
+            spent_total: '100',
+            max_single_tx: '100',
+            allowed_protocols: [scallopBytes()],
+            expires_at_ms: '1700000000000',
+            paused: false,
+            revoked: false,
+          },
+        },
+      },
+    })
+
+    await expect(fetchPolicyState('0xpolicy', client)).rejects.toThrow(PolicyFetchError)
+  })
 })

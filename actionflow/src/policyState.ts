@@ -8,6 +8,14 @@ export class PolicyFetchError extends Error {
   }
 }
 
+function safeNumber(value: unknown, field: string, policyId: string): number {
+  const n = Number(value)
+  if (!Number.isSafeInteger(n)) {
+    throw new PolicyFetchError(`Object ${policyId} field ${field} (${String(value)}) is not a safe integer`)
+  }
+  return n
+}
+
 export async function fetchPolicyState(policyId: string, client: SuiJsonRpcClient): Promise<PolicyState> {
   const response = await client.getObject({ id: policyId, options: { showContent: true } })
 
@@ -20,6 +28,10 @@ export async function fetchPolicyState(policyId: string, client: SuiJsonRpcClien
   }
 
   const fields = content.fields as Record<string, unknown>
+
+  if (typeof fields.agent !== 'string') {
+    throw new PolicyFetchError(`Object ${policyId} has a non-string agent field`)
+  }
 
   const allowedProtocolsRaw = fields.allowed_protocols
   if (!Array.isArray(allowedProtocolsRaw)) {
@@ -37,12 +49,12 @@ export async function fetchPolicyState(policyId: string, client: SuiJsonRpcClien
   }
 
   return {
-    agent: String(fields.agent),
-    maxTotalBudget: Number(fields.max_total_budget),
-    spentTotal: Number(fields.spent_total),
-    maxSingleTx: Number(fields.max_single_tx),
+    agent: fields.agent,
+    maxTotalBudget: safeNumber(fields.max_total_budget, 'max_total_budget', policyId),
+    spentTotal: safeNumber(fields.spent_total, 'spent_total', policyId),
+    maxSingleTx: safeNumber(fields.max_single_tx, 'max_single_tx', policyId),
     allowedProtocols,
-    expiresAtMs: Number(fields.expires_at_ms),
+    expiresAtMs: safeNumber(fields.expires_at_ms, 'expires_at_ms', policyId),
     paused: fields.paused,
     revoked: fields.revoked,
   }
