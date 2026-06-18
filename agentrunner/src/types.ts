@@ -1,7 +1,6 @@
-import type Anthropic from '@anthropic-ai/sdk'
 import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
 import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
-import type { FieldError } from 'actionflow'
+import type { FieldError, TranslateActionOptions } from 'actionflow'
 
 export interface ActionRecordedEvent {
   policyId: string
@@ -25,7 +24,7 @@ export interface RunActionOptions {
   policyId: string
   packageId: string
   walrusBlobId: string
-  client?: Anthropic
+  client?: TranslateActionOptions['client']
   suiClient?: SuiJsonRpcClient
   signer?: Ed25519Keypair
 }
