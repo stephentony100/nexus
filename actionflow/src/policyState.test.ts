@@ -76,4 +76,52 @@ describe('fetchPolicyState', () => {
 
     await expect(fetchPolicyState('0xpolicy', client)).rejects.toThrow(PolicyFetchError)
   })
+
+  it('throws PolicyFetchError when the Move type is not a PolicyObject', async () => {
+    const client = mockClient({
+      data: {
+        objectId: '0xpolicy',
+        content: {
+          dataType: 'moveObject',
+          type: '0x123::coin::Coin',
+          fields: {
+            agent: '0xagent',
+            max_total_budget: '500',
+            spent_total: '100',
+            max_single_tx: '100',
+            allowed_protocols: [scallopBytes()],
+            expires_at_ms: '1700000000000',
+            paused: false,
+            revoked: false,
+          },
+        },
+      },
+    })
+
+    await expect(fetchPolicyState('0xpolicy', client)).rejects.toThrow(PolicyFetchError)
+  })
+
+  it('throws PolicyFetchError when paused/revoked are not booleans', async () => {
+    const client = mockClient({
+      data: {
+        objectId: '0xpolicy',
+        content: {
+          dataType: 'moveObject',
+          type: '0x123::policy::PolicyObject',
+          fields: {
+            agent: '0xagent',
+            max_total_budget: '500',
+            spent_total: '100',
+            max_single_tx: '100',
+            allowed_protocols: [scallopBytes()],
+            expires_at_ms: '1700000000000',
+            paused: undefined,
+            revoked: false,
+          },
+        },
+      },
+    })
+
+    await expect(fetchPolicyState('0xpolicy', client)).rejects.toThrow(PolicyFetchError)
+  })
 })
