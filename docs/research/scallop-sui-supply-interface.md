@@ -64,7 +64,7 @@ The TypeScript SDK exposes Scallop lending supply through builder methods such a
 Observed source references:
 
 - `document/builder.md:59` - builder docs note that `depositQuick` requires a sender before supply.
-- `document/builder.md:61` - builder docs show `depositQuick(10 ** 9, 'wusdc')` returning a market coin that is transferred to the sender.
+- `document/builder.md:61` - builder docs name the `depositQuick(10 ** 9, 'wusdc')` result `marketCoin`, but source behavior below shows `depositQuick` converts to sCoin by default.
 - `document/builder.md:129` - builder docs show a SUI-specific `deposit(coin, 'sui')` call after splitting SUI from gas.
 - `src/builders/coreBuilder.ts:139` - `deposit` derives the coin type from the pool coin name.
 - `src/builders/coreBuilder.ts:144` - `deposit` calls `${coreIds.protocolPkg}::mint::mint`.
@@ -86,5 +86,5 @@ Package metadata:
 
 SDK implication for Nexus:
 
-- ActionFlow can later use object IDs and PTB argument order validated here.
+- ActionFlow can later use the SDK's address lookup keys and PTB argument order validated here; concrete object IDs still come from Scallop package-address docs/config.
 - The SDK alone does not solve Move-side `MarketCoin<SUI>` type coupling inside `PolicyObject`.
