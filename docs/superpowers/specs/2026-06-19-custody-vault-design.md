@@ -16,7 +16,7 @@ This design follows `Nexus.md` and builds directly on `docs/superpowers/specs/20
 - Let the owner fund a policy with a fixed amount of SUI at creation time, denominated identically to the policy's `max_total_budget`.
 - Let only the owner withdraw some or all of the vault's remaining balance, at any time, regardless of the policy's paused/revoked/expired state.
 - Expose a read-only balance query so off-chain code (and future on-chain logic) can see how much SUI a policy currently custodies.
-- Leave `record_action` and all existing entry functions byte-for-byte unchanged — this phase adds custody, not action accounting or protocol execution.
+- `record_action` behavior and signature remain unchanged — this phase adds custody, not action accounting or protocol execution.
 
 ## Non-Goals
 
