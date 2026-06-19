@@ -51,5 +51,6 @@ Current Scallop docs list:
 
 ### Move Package Search In SDK Repo
 
-- Command: `Get-ChildItem ... -Filter Move.toml`
+- Command: `Get-ChildItem -Path (Join-Path $probe "sui-scallop-sdk") -Recurse -Filter Move.toml | Select-Object -ExpandProperty FullName`
 - Result: No Move.toml files found in the SDK repo clone.
+- Evidence: command completed with no output.
