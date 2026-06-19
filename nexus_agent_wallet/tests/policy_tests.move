@@ -639,4 +639,223 @@ module nexus_agent_wallet::policy_tests {
         clock::destroy_for_testing(clock);
         test::end(scenario);
     }
+
+    #[test]
+    fun owner_can_withdraw_partial_amount_and_vault_balance_reflects_it() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(
+            AGENT,
+            500,
+            100,
+            protocols(),
+            31_000,
+            mint_deposit(&mut scenario, 500),
+            &clock,
+            test::ctx(&mut scenario),
+        );
+
+        test::next_tx(&mut scenario, OWNER);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::owner_withdraw(&mut policy_obj, 200, &clock, test::ctx(&mut scenario));
+        assert!(policy::vault_balance(&policy_obj) == 300, 0);
+        test::return_shared(policy_obj);
+
+        test::next_tx(&mut scenario, OWNER);
+        let withdrawn = test::take_from_sender<Coin<SUI>>(&scenario);
+        assert!(coin::value(&withdrawn) == 200, 1);
+        coin::burn_for_testing(withdrawn);
+
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test]
+    fun owner_can_withdraw_full_balance_down_to_zero() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(
+            AGENT,
+            500,
+            100,
+            protocols(),
+            31_000,
+            mint_deposit(&mut scenario, 500),
+            &clock,
+            test::ctx(&mut scenario),
+        );
+
+        test::next_tx(&mut scenario, OWNER);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::owner_withdraw(&mut policy_obj, 500, &clock, test::ctx(&mut scenario));
+        assert!(policy::vault_balance(&policy_obj) == 0, 0);
+        test::return_shared(policy_obj);
+
+        test::next_tx(&mut scenario, OWNER);
+        let withdrawn = test::take_from_sender<Coin<SUI>>(&scenario);
+        assert!(coin::value(&withdrawn) == 500, 1);
+        coin::burn_for_testing(withdrawn);
+
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test, expected_failure(abort_code = 10, location = nexus_agent_wallet::policy)]
+    fun owner_withdraw_rejects_zero_amount() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(
+            AGENT,
+            500,
+            100,
+            protocols(),
+            31_000,
+            mint_deposit(&mut scenario, 500),
+            &clock,
+            test::ctx(&mut scenario),
+        );
+
+        test::next_tx(&mut scenario, OWNER);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::owner_withdraw(&mut policy_obj, 0, &clock, test::ctx(&mut scenario));
+
+        policy::destroy_for_testing(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test, expected_failure(abort_code = 14, location = nexus_agent_wallet::policy)]
+    fun owner_withdraw_rejects_amount_above_vault_balance() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(
+            AGENT,
+            500,
+            100,
+            protocols(),
+            31_000,
+            mint_deposit(&mut scenario, 500),
+            &clock,
+            test::ctx(&mut scenario),
+        );
+
+        test::next_tx(&mut scenario, OWNER);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::owner_withdraw(&mut policy_obj, 501, &clock, test::ctx(&mut scenario));
+
+        policy::destroy_for_testing(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test, expected_failure(abort_code = 4, location = nexus_agent_wallet::policy)]
+    fun non_owner_cannot_withdraw() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(
+            AGENT,
+            500,
+            100,
+            protocols(),
+            31_000,
+            mint_deposit(&mut scenario, 500),
+            &clock,
+            test::ctx(&mut scenario),
+        );
+
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::owner_withdraw(&mut policy_obj, 100, &clock, test::ctx(&mut scenario));
+
+        policy::destroy_for_testing(policy_obj);
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test]
+    fun owner_withdraw_succeeds_while_paused() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(
+            AGENT,
+            500,
+            100,
+            protocols(),
+            31_000,
+            mint_deposit(&mut scenario, 500),
+            &clock,
+            test::ctx(&mut scenario),
+        );
+
+        test::next_tx(&mut scenario, OWNER);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::pause_policy(&mut policy_obj, &clock, test::ctx(&mut scenario));
+        policy::owner_withdraw(&mut policy_obj, 100, &clock, test::ctx(&mut scenario));
+        assert!(policy::vault_balance(&policy_obj) == 400, 0);
+        test::return_shared(policy_obj);
+
+        test::next_tx(&mut scenario, OWNER);
+        coin::burn_for_testing(test::take_from_sender<Coin<SUI>>(&scenario));
+
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test]
+    fun owner_withdraw_succeeds_while_revoked() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(
+            AGENT,
+            500,
+            100,
+            protocols(),
+            31_000,
+            mint_deposit(&mut scenario, 500),
+            &clock,
+            test::ctx(&mut scenario),
+        );
+
+        test::next_tx(&mut scenario, OWNER);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::revoke_policy(&mut policy_obj, &clock, test::ctx(&mut scenario));
+        policy::owner_withdraw(&mut policy_obj, 100, &clock, test::ctx(&mut scenario));
+        assert!(policy::vault_balance(&policy_obj) == 400, 0);
+        test::return_shared(policy_obj);
+
+        test::next_tx(&mut scenario, OWNER);
+        coin::burn_for_testing(test::take_from_sender<Coin<SUI>>(&scenario));
+
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
+
+    #[test]
+    fun owner_withdraw_succeeds_while_expired() {
+        let mut scenario = test::begin(OWNER);
+        let mut clock = clock::create_for_testing(test::ctx(&mut scenario));
+        policy::create_policy(
+            AGENT,
+            500,
+            100,
+            protocols(),
+            31_000,
+            mint_deposit(&mut scenario, 500),
+            &clock,
+            test::ctx(&mut scenario),
+        );
+        clock::set_for_testing(&mut clock, 31_001);
+
+        test::next_tx(&mut scenario, OWNER);
+        let mut policy_obj = test::take_shared<policy::PolicyObject>(&scenario);
+        policy::owner_withdraw(&mut policy_obj, 100, &clock, test::ctx(&mut scenario));
+        assert!(policy::vault_balance(&policy_obj) == 400, 0);
+        test::return_shared(policy_obj);
+
+        test::next_tx(&mut scenario, OWNER);
+        coin::burn_for_testing(test::take_from_sender<Coin<SUI>>(&scenario));
+
+        clock::destroy_for_testing(clock);
+        test::end(scenario);
+    }
 }

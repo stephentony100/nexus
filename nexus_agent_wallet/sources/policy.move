@@ -24,6 +24,7 @@ module nexus_agent_wallet::policy {
     const ESingleTxLimitExceeded: u64 = 11;
     const ETotalBudgetExceeded: u64 = 12;
     const EDepositMismatch: u64 = 13;
+    const EInsufficientVaultBalance: u64 = 14;
 
     public struct PolicyObject has key {
         id: UID,
@@ -75,6 +76,14 @@ module nexus_agent_wallet::policy {
         amount: u64,
         spent_total: u64,
         walrus_blob_id: vector<u8>,
+        timestamp_ms: u64,
+    }
+
+    public struct FundsWithdrawn has copy, drop {
+        policy_id: address,
+        owner: address,
+        amount: u64,
+        remaining_balance: u64,
         timestamp_ms: u64,
     }
 
@@ -192,6 +201,29 @@ module nexus_agent_wallet::policy {
             amount,
             spent_total: new_spent_total,
             walrus_blob_id,
+            timestamp_ms: clock::timestamp_ms(clock),
+        });
+    }
+
+    public entry fun owner_withdraw(
+        policy: &mut PolicyObject,
+        amount: u64,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ) {
+        assert_owner(policy, ctx);
+        assert!(amount > 0, EZeroAmount);
+        assert!(amount <= balance::value(&policy.vault), EInsufficientVaultBalance);
+
+        let withdrawn = balance::split(&mut policy.vault, amount);
+        let coin_out = coin::from_balance(withdrawn, ctx);
+        transfer::public_transfer(coin_out, tx_context::sender(ctx));
+
+        event::emit(FundsWithdrawn {
+            policy_id: object::uid_to_address(&policy.id),
+            owner: policy.owner,
+            amount,
+            remaining_balance: balance::value(&policy.vault),
             timestamp_ms: clock::timestamp_ms(clock),
         });
     }
