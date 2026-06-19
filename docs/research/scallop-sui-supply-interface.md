@@ -56,3 +56,35 @@ Current Scallop docs list:
 - Command: `Get-ChildItem -Path "C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-scallop-sdk" -Recurse -Filter Move.toml | Select-Object -ExpandProperty FullName`
 - Result: No Move.toml files found in the SDK repo clone.
 - Evidence: command completed with no output.
+
+## NPM SDK Inspection
+
+The TypeScript SDK exposes Scallop lending supply through builder methods such as `depositQuick` and `deposit`.
+
+Observed source references:
+
+- `document/builder.md:59` - builder docs note that `depositQuick` requires a sender before supply.
+- `document/builder.md:61` - builder docs show `depositQuick(10 ** 9, 'wusdc')` returning a market coin that is transferred to the sender.
+- `document/builder.md:129` - builder docs show a SUI-specific `deposit(coin, 'sui')` call after splitting SUI from gas.
+- `src/builders/coreBuilder.ts:139` - `deposit` derives the coin type from the pool coin name.
+- `src/builders/coreBuilder.ts:144` - `deposit` calls `${coreIds.protocolPkg}::mint::mint`.
+- `src/builders/coreBuilder.ts:145` - `deposit` passes PTB arguments in the order `[coreIds.version, coreIds.market, coin, clockObjectRef]`.
+- `src/builders/coreBuilder.ts:335` - `depositQuick` is exposed as an async helper accepting `amount`, `poolCoinName`, and optional `returnSCoin`.
+- `src/builders/coreBuilder.ts:338` - `depositQuick` handles the SUI path by splitting SUI from gas before calling `txBlock.deposit`.
+- `src/builders/coreBuilder.ts:352` - `depositQuick` converts the returned market coin to sCoin by default, or returns the market coin when `returnSCoin` is false.
+- `src/builders/coreBuilder.ts:70` - core builder resolves the market object from `builder.address.get('core.market')`.
+- `src/builders/coreBuilder.ts:71` - core builder resolves the version object from `builder.address.get('core.version')`.
+
+SDK clone:
+
+- commit: `5417cc678d2774ce9fd142dc5140ce401913111d`
+
+Package metadata:
+
+- package name: `@scallop-io/sui-scallop-sdk`
+- version: `2.2.0`
+
+SDK implication for Nexus:
+
+- ActionFlow can later use object IDs and PTB argument order validated here.
+- The SDK alone does not solve Move-side `MarketCoin<SUI>` type coupling inside `PolicyObject`.
