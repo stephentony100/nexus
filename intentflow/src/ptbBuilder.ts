@@ -11,6 +11,8 @@ export function buildCreatePolicyPtb(strategy: PolicyStrategy, packageId: string
     Array.from(new TextEncoder().encode(protocol)),
   )
 
+  const [initialDeposit] = tx.splitCoins(tx.gas, [tx.pure.u64(strategy.maxTotalBudget)])
+
   tx.moveCall({
     target: `${packageId}::policy::create_policy`,
     arguments: [
@@ -19,6 +21,7 @@ export function buildCreatePolicyPtb(strategy: PolicyStrategy, packageId: string
       tx.pure.u64(strategy.maxSingleTx),
       tx.pure.vector('vector<u8>', allowedProtocolsBytes),
       tx.pure.u64(strategy.expiresAtMs),
+      initialDeposit,
       tx.sharedObjectRef({
         objectId: SUI_CLOCK_OBJECT_ID,
         initialSharedVersion: SUI_CLOCK_INITIAL_SHARED_VERSION,
