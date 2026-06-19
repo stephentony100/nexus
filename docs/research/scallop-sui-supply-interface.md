@@ -34,3 +34,22 @@ Current Scallop docs list:
 - Scallop docs: `https://docs.scallop.io/integrations/contract-integration/lending-function`
 - Scallop package addresses: `https://docs.scallop.io/integrations/package-addresses`
 - Scallop SDK repo: `https://github.com/scallop-io/sui-scallop-sdk`
+
+## Git Repository Checks
+
+### `scallop-io/sui-lending-protocol`
+
+- Command: `git ls-remote https://github.com/scallop-io/sui-lending-protocol.git`
+- Result: The repository is public and returned refs.
+- Evidence: `334e93a1232a1d9417466080ae24491be3f7b27c	HEAD`
+
+### `scallop-io/sui-scallop-sdk`
+
+- Command: `git ls-remote https://github.com/scallop-io/sui-scallop-sdk.git`
+- Result: The repository is public and returned refs.
+- Evidence: `5417cc678d2774ce9fd142dc5140ce401913111d	HEAD`
+
+### Move Package Search In SDK Repo
+
+- Command: `Get-ChildItem ... -Filter Move.toml`
+- Result: No Move.toml files found in the SDK repo clone.
