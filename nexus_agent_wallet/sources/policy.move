@@ -1,9 +1,12 @@
 #[allow(duplicate_alias, lint(public_entry))]
 module nexus_agent_wallet::policy {
     use std::vector;
+    use sui::balance::{Self, Balance};
     use sui::clock::{Self, Clock};
+    use sui::coin::{Self, Coin};
     use sui::event;
     use sui::object::{Self, UID};
+    use sui::sui::SUI;
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
 
@@ -20,6 +23,7 @@ module nexus_agent_wallet::policy {
     const EZeroAmount: u64 = 10;
     const ESingleTxLimitExceeded: u64 = 11;
     const ETotalBudgetExceeded: u64 = 12;
+    const EDepositMismatch: u64 = 13;
 
     public struct PolicyObject has key {
         id: UID,
@@ -27,6 +31,7 @@ module nexus_agent_wallet::policy {
         agent: address,
         max_total_budget: u64,
         spent_total: u64,
+        vault: Balance<SUI>,
         max_single_tx: u64,
         allowed_protocols: vector<vector<u8>>,
         expires_at_ms: u64,
@@ -79,6 +84,7 @@ module nexus_agent_wallet::policy {
         max_single_tx: u64,
         allowed_protocols: vector<vector<u8>>,
         expires_at_ms: u64,
+        initial_deposit: Coin<SUI>,
         clock: &Clock,
         ctx: &mut TxContext,
     ) {
@@ -88,6 +94,7 @@ module nexus_agent_wallet::policy {
         assert!(max_single_tx <= max_total_budget, EInvalidSingleTxLimit);
         assert!(vector::length(&allowed_protocols) > 0, EEmptyProtocolList);
         assert!(expires_at_ms > now, EInvalidExpiry);
+        assert!(coin::value(&initial_deposit) == max_total_budget, EDepositMismatch);
 
         let owner = tx_context::sender(ctx);
         let policy = PolicyObject {
@@ -96,6 +103,7 @@ module nexus_agent_wallet::policy {
             agent,
             max_total_budget,
             spent_total: 0,
+            vault: coin::into_balance(initial_deposit),
             max_single_tx,
             allowed_protocols,
             expires_at_ms,
@@ -173,8 +181,8 @@ module nexus_agent_wallet::policy {
         assert!(amount > 0, EZeroAmount);
         assert!(amount <= policy.max_single_tx, ESingleTxLimitExceeded);
 
+        assert!(amount <= policy.max_total_budget - policy.spent_total, ETotalBudgetExceeded);
         let new_spent_total = policy.spent_total + amount;
-        assert!(new_spent_total <= policy.max_total_budget, ETotalBudgetExceeded);
         policy.spent_total = new_spent_total;
 
         event::emit(ActionRecorded {
@@ -195,6 +203,8 @@ module nexus_agent_wallet::policy {
     public fun max_total_budget(policy: &PolicyObject): u64 { policy.max_total_budget }
 
     public fun spent_total(policy: &PolicyObject): u64 { policy.spent_total }
+
+    public fun vault_balance(policy: &PolicyObject): u64 { balance::value(&policy.vault) }
 
     public fun max_single_tx(policy: &PolicyObject): u64 { policy.max_single_tx }
 
@@ -234,6 +244,7 @@ module nexus_agent_wallet::policy {
             agent: _,
             max_total_budget: _,
             spent_total: _,
+            vault,
             max_single_tx: _,
             allowed_protocols: _,
             expires_at_ms: _,
@@ -241,6 +252,7 @@ module nexus_agent_wallet::policy {
             revoked: _,
             created_at_ms: _,
         } = policy;
+        balance::destroy_for_testing(vault);
         object::delete(id);
     }
 }
