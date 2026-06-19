@@ -17,17 +17,33 @@ describe('buildCreatePolicyPtb', () => {
   it('adds exactly one moveCall targeting policy::create_policy', () => {
     const tx = buildCreatePolicyPtb(STRATEGY, PACKAGE_ID)
     const data = tx.getData()
-    const moveCalls = data.commands.filter(
-      (c): c is { $kind: 'MoveCall'; MoveCall: { package: string; module: string; function: string; arguments: unknown[] } } =>
-        c.$kind === 'MoveCall',
-    )
+    const moveCalls = data.commands.filter((command) => command.$kind === 'MoveCall')
 
     expect(moveCalls).toHaveLength(1)
-    const call = moveCalls[0].MoveCall
+    const command = moveCalls[0]
+    if (!command || command.$kind !== 'MoveCall') {
+      throw new Error('Expected create_policy MoveCall command')
+    }
+
+    const call = command.MoveCall
     expect(call.package).toBe(PACKAGE_ID)
     expect(call.module).toBe('policy')
     expect(call.function).toBe('create_policy')
-    expect(call.arguments).toHaveLength(6)
+    expect(call.arguments).toHaveLength(7)
+  })
+
+  it('splits the initial deposit from the gas coin', () => {
+    const tx = buildCreatePolicyPtb(STRATEGY, PACKAGE_ID)
+    const data = tx.getData()
+    const splitCoins = data.commands.filter((command) => command.$kind === 'SplitCoins')
+
+    expect(splitCoins).toHaveLength(1)
+    const command = splitCoins[0]
+    if (!command || command.$kind !== 'SplitCoins') {
+      throw new Error('Expected initial deposit SplitCoins command')
+    }
+
+    expect(command.SplitCoins.coin).toEqual({ $kind: 'GasCoin', GasCoin: true })
   })
 
   it('builds to bytes without requiring a network client', async () => {
