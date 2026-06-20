@@ -283,3 +283,33 @@ warning[W09009]: unused struct field
 `Balance<MarketCoin<SUI>> result: compiled`
 
 `build result: succeeded`
+
+## Publication Linkage
+
+Exact command:
+
+```powershell
+sui move build --path $env:TEMP\nexus-scallop-linkage\scallop_linkage_probe --build-env mainnet --dump-bytecode-as-base64 --no-tree-shaking --quiet
+```
+
+- timeout: 180 seconds
+- expected current package: `0xa45b8ffca59e5b44ec7c04481a04cb620b0e07b2b183527bca4e5f32372c5f1a`
+- rejected old package: `0xde5c09ad171544aa3724dc67216668c80e754860f419136a68d78504eb2e2805`
+- command result: timeout; the remaining command process was terminated and a subsequent process check found no surviving `sui` process
+- package assertions: not run because the command did not exit 0 with usable publication metadata
+- captured output file: `%TEMP%\nexus-scallop-linkage\publish-metadata.txt`
+
+Relevant captured dependency output:
+
+```text
+Error while loading dependency C:\Users\CodexSandboxOffline\.move\git\https___github_com_scallop-io_sui-lending-protocol_git_2425b5b8b107bda10f4fa04517eb3cc009817249\contracts\libs\coin_decimals_registry: Error while fetching `{ git = "https://...protocol.git", path = "contracts\libs\coin_decimals_registry", rev = "2425b5...49" }`: error while executing git command `Command { std: "git" "-c" "advice.detachedHead=false" "clone" "--quiet" "--sparse" "--filter=blob:none" "--no-checkout" "--depth" "1" "--" "https://github.com/scallop-io/sui-lending-protocol.git" "C:\\Users\\CodexSandboxOffline\\.move\\git\\https___github_com_scallop-io_sui-lending-protocol_git_2425b5b8b107bda10f4fa04517eb3cc009817249", kill_on_drop: false }`:
+ErrorCode(ExitStatus(ExitStatus(128)))
+
+Downloading from https://github.com/scallop-io/sui-lending-protocol.git
+output from `git -c advice.detachedHead=false clone --quiet --sparse --filter=blob:none --no-checkout --depth 1 -- https://github.com/scallop-io/sui-lending-protocol.git C:\Users\CodexSandboxOffline\.move\git\https___github_com_scallop-io_sui-lending-protocol_git_2425b5b8b107bda10f4fa04517eb3cc009817249`
+  fatal: unable to access 'https://github.com/scallop-io/sui-lending-protocol.git/': Failed to connect to github.com port 443 after 334 ms: Could not connect to server
+```
+
+`REVISE: PUBLICATION_LINKAGE_VERIFICATION_FAILED`
+
+Reason: the strict 180-second publication command did not return usable output before timeout. The only captured output is a dependency-fetch network failure from the preceding attempt. Therefore neither presence of the current package ID nor absence of the old package ID was established, and success is not inferred.
