@@ -292,6 +292,32 @@ Publication metadata command:
 C:\Users\NT\bin\sui.exe move build --path "%TEMP%\nexus-scallop-linkage\scallop_linkage_probe" --build-env mainnet --dump-bytecode-as-base64 --no-tree-shaking --quiet
 ```
 
+Exact `%TEMP%\nexus-scallop-linkage\run-publication.cmd` content:
+
+```bat
+@echo off
+"C:\Users\NT\bin\sui.exe" move build --path "%TEMP%\nexus-scallop-linkage\scallop_linkage_probe" --build-env mainnet --dump-bytecode-as-base64 --no-tree-shaking --quiet > "%TEMP%\nexus-scallop-linkage\publication-wrapper-output.txt" 2>&1
+exit /b %ERRORLEVEL%
+```
+
+Exact parent PowerShell invocation:
+
+```powershell
+$root = Join-Path $env:TEMP 'nexus-scallop-linkage'
+$script = Join-Path $root 'run-publication.cmd'
+$output = Join-Path $root 'publication-wrapper-output.txt'
+Remove-Item -LiteralPath $output -Force -ErrorAction SilentlyContinue
+$process = Start-Process -FilePath $env:ComSpec -ArgumentList @('/d','/c',$script) -WindowStyle Hidden -PassThru
+$completed = $process.WaitForExit(180000)
+if (-not $completed) {
+    & taskkill.exe /PID $process.Id /T /F | Out-Null
+    'WRAPPER_RESULT=TIMEOUT_180_SECONDS'
+} else {
+    "WRAPPER_RESULT=EXIT_$($process.ExitCode)"
+}
+if (Test-Path $output) { Get-Content -Raw $output }
+```
+
 - timeout: 180 seconds
 - expected current package: `0xa45b8ffca59e5b44ec7c04481a04cb620b0e07b2b183527bca4e5f32372c5f1a`
 - rejected old package: `0xde5c09ad171544aa3724dc67216668c80e754860f419136a68d78504eb2e2805`
