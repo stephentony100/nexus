@@ -312,4 +312,17 @@ output from `git -c advice.detachedHead=false clone --quiet --sparse --filter=bl
 
 `REVISE: PUBLICATION_LINKAGE_VERIFICATION_FAILED`
 
-Reason: the strict 180-second publication command did not return usable output before timeout. The only captured output is a dependency-fetch network failure from the preceding attempt. Therefore neither presence of the current package ID nor absence of the old package ID was established, and success is not inferred.
+Controller escalated retry command (approved network escalation):
+
+```powershell
+$probe = Join-Path $env:TEMP 'nexus-scallop-linkage\scallop_linkage_probe'; sui move build --path $probe --build-env mainnet --dump-bytecode-as-base64 --no-tree-shaking --quiet
+```
+
+- retry window: strict 180 seconds
+- retry output: no usable output was emitted
+- retry result: the command was terminated at the 180-second limit
+- `CURRENT_SCALLOP_DEPENDENCY_RESOLVED`: not obtained
+
+Reason: the original sandbox attempt produced the dependency-fetch network failure captured above. The controller then reran the exact publication command with approved network escalation, but it emitted no usable output and was terminated at the strict 180-second limit. Therefore neither presence of the current package ID nor absence of the old package ID was established, and success is not inferred.
+
+Task 6 requirement remains `REVISE`: publication linkage must be verified before proceeding.
