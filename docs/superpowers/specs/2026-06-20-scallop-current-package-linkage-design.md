@@ -48,11 +48,11 @@ The fork must:
 - change only approved deployment metadata such as published-at;
 - leave all .move source files unchanged;
 - leave dependency declarations and revisions unchanged;
-- leave named addresses and type origins unchanged;
+- leave named addresses unchanged unless the only required change is the approved published-at or address metadata needed to bind to **0xa45b...**;
 - contain no logic, module, type, function, or test behavior changes;
 - be referenced by an immutable commit SHA, never a branch name.
 
-Any source, dependency, named-address, or logic difference invalidates the fork.
+Any difference outside the explicitly approved deployment-metadata change invalidates the fork.
 
 ## Verification Flow
 
