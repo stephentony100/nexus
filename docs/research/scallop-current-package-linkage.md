@@ -188,3 +188,73 @@ foreach ($sha in $manifestCommits) { git -C $repo grep -n -F '0xa45b8ffca59e5b44
 - fallback repository created: no
 
 Source-equivalence scope: this is official source, so no fork diff is needed; later probe/linkage tasks still must verify compilation and resolved dependency IDs.
+
+## Concrete Move Probe
+
+- repository: `https://github.com/scallop-io/sui-lending-protocol.git`
+- subdirectory: `contracts/protocol`
+- immutable revision: `2425b5b8b107bda10f4fa04517eb3cc009817249`
+- build environment: `mainnet`
+
+Exact probe source:
+
+```move
+module scallop_linkage_probe::probe;
+
+use protocol::market::Market;
+use protocol::mint;
+use protocol::reserve::MarketCoin;
+use protocol::version::Version;
+use sui::balance::Balance;
+use sui::clock::Clock;
+use sui::coin::Coin;
+use sui::sui::SUI;
+
+public struct PositionProbe has store {
+    position: Balance<MarketCoin<SUI>>,
+}
+
+public fun supply_probe(
+    version: &Version,
+    market: &mut Market,
+    coin: Coin<SUI>,
+    clock: &Clock,
+    ctx: &mut sui::tx_context::TxContext,
+): Coin<MarketCoin<SUI>> {
+    mint::mint<SUI>(version, market, coin, clock, ctx)
+}
+```
+
+Build command:
+
+```powershell
+sui move build --path $probe --build-env mainnet
+```
+
+Complete build output (terminal color escape sequences omitted):
+
+```text
+Downloading from https://github.com/scallop-io/sui-lending-protocol.git
+INCLUDING DEPENDENCY CoinDecimalsRegistry
+INCLUDING DEPENDENCY Math
+INCLUDING DEPENDENCY MoveStdlib
+INCLUDING DEPENDENCY ScallopProtocol
+INCLUDING DEPENDENCY Sui
+INCLUDING DEPENDENCY Whitelist
+INCLUDING DEPENDENCY X
+INCLUDING DEPENDENCY XOracle
+BUILDING scallop_linkage_probe
+warning[W09009]: unused struct field
+   +- .\sources\probe.move:13:5
+   |
+13 |     position: Balance<MarketCoin<SUI>>,
+   |     ^^^^^^^^ The 'position' field of the 'PositionProbe' type is unused
+   |
+   = This warning can be suppressed with '#[allow(unused_field)]' applied to the 'module' or module member ('const', 'fun', or 'struct')
+```
+
+`mint<SUI> result: compiled`
+
+`Balance<MarketCoin<SUI>> result: compiled`
+
+`build result: succeeded`
