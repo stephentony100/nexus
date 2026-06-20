@@ -136,12 +136,32 @@ At that commit, exact fixed-string matches occur in both manifests:
 2425b5b8b107bda10f4fa04517eb3cc009817249:contracts/protocol/Move.toml:4:published-at = "0xa45b8ffca59e5b44ec7c04481a04cb620b0e07b2b183527bca4e5f32372c5f1a"
 ```
 
-Command evidence (run in the full temporary clone):
+Command evidence and count-to-output mapping:
 
 ```powershell
-git fetch --all --tags --prune
-git for-each-ref --format='%(refname)'
-git rev-list --all
-$commits = git log --all --format='%H' -- contracts/protocol/Move.toml contracts/protocol/Move.mainnet.toml | Sort-Object -Unique
-foreach ($sha in $commits) { git grep -n -F '0xa45b8ffca59e5b44ec7c04481a04cb620b0e07b2b183527bca4e5f32372c5f1a' $sha -- contracts/protocol/Move.toml contracts/protocol/Move.mainnet.toml }
+$root = Join-Path $env:TEMP 'nexus-scallop-linkage'
+$repo = Join-Path $root 'sui-lending-protocol'
+git clone https://github.com/scallop-io/sui-lending-protocol.git $repo
+git -C $repo fetch --all --tags --prune
+
+$refs = @(git -C $repo for-each-ref --format='%(refname)')
+$branchRefs = @($refs | Where-Object { $_ -like 'refs/heads/*' -or $_ -like 'refs/remotes/*' })
+$tagRefs = @($refs | Where-Object { $_ -like 'refs/tags/*' })
+$allCommits = @(git -C $repo rev-list --all)
+$manifestCommits = @(git -C $repo log --all --format='%H' -- contracts/protocol/Move.toml contracts/protocol/Move.mainnet.toml | Sort-Object -Unique)
+
+[pscustomobject]@{
+  TotalRefs = $refs.Count
+  BranchRefs = $branchRefs.Count
+  Tags = $tagRefs.Count
+  UniqueCommits = $allCommits.Count
+  ManifestTouchingCommits = $manifestCommits.Count
+}
+
+# Output:
+# TotalRefs BranchRefs Tags UniqueCommits ManifestTouchingCommits
+# --------- ---------- ---- ------------- -----------------------
+#        54         47    7           794                      39
+
+foreach ($sha in $manifestCommits) { git -C $repo grep -n -F '0xa45b8ffca59e5b44ec7c04481a04cb620b0e07b2b183527bca4e5f32372c5f1a' $sha -- contracts/protocol/Move.toml contracts/protocol/Move.mainnet.toml }
 ```
