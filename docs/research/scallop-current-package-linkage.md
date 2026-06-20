@@ -175,3 +175,16 @@ $manifestCommits = @(git -C $repo log --all --format='%H' -- contracts/protocol/
 
 foreach ($sha in $manifestCommits) { git -C $repo grep -n -F '0xa45b8ffca59e5b44ec7c04481a04cb620b0e07b2b183527bca4e5f32372c5f1a' $sha -- contracts/protocol/Move.toml contracts/protocol/Move.mainnet.toml }
 ```
+
+## Dependency Selection
+
+- source: official Scallop repository
+- repository: `https://github.com/scallop-io/sui-lending-protocol.git`
+- subdirectory: `contracts/protocol`
+- selected commit: `2425b5b8b107bda10f4fa04517eb3cc009817249`
+- selected commit is immutable: yes
+- fork used: no
+- official manifest already targets current package: `0xa45b8ffca59e5b44ec7c04481a04cb620b0e07b2b183527bca4e5f32372c5f1a`
+- fallback repository created: no
+
+Source-equivalence scope: this is official source, so no fork diff is needed; later probe/linkage tasks still must verify compilation and resolved dependency IDs.
