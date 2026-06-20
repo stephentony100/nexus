@@ -141,6 +141,16 @@ Command evidence and count-to-output mapping:
 ```powershell
 $root = Join-Path $env:TEMP 'nexus-scallop-linkage'
 $repo = Join-Path $root 'sui-lending-protocol'
+New-Item -ItemType Directory -Path $root -Force | Out-Null
+if (Test-Path -LiteralPath $repo) {
+  $resolvedRoot = (Resolve-Path -LiteralPath $root).Path
+  $resolved = (Resolve-Path -LiteralPath $repo).Path
+  $rootPrefix = $resolvedRoot.TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+  if (-not $resolved.StartsWith($rootPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw "Refusing to remove '$resolved': it is not within '$resolvedRoot'."
+  }
+  Remove-Item -Recurse -Force -LiteralPath $resolved
+}
 git clone https://github.com/scallop-io/sui-lending-protocol.git $repo
 git -C $repo fetch --all --tags --prune
 
