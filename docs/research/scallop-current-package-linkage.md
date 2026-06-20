@@ -114,3 +114,34 @@ Complete `sui_getNormalizedMoveFunction` response for module `mint`, function `m
   }
 }
 ```
+
+## Official Manifest Search
+
+Official repository: `https://github.com/scallop-io/sui-lending-protocol.git`
+
+Search scope: all fetched branches, commits, and tags after a full clone and `git fetch --all --tags --prune`. The fetched repository contained 54 refs (47 local/remote branch refs and 7 tags), 794 unique commits reachable from all refs, and 39 unique commits touching either `contracts/protocol/Move.toml` or `contracts/protocol/Move.mainnet.toml`.
+
+Exact result: `OFFICIAL_MATCH`
+
+Matching SHA:
+
+- `2425b5b8b107bda10f4fa04517eb3cc009817249` (`chore: update package id`)
+
+Selected immutable official SHA: `2425b5b8b107bda10f4fa04517eb3cc009817249`
+
+At that commit, exact fixed-string matches occur in both manifests:
+
+```text
+2425b5b8b107bda10f4fa04517eb3cc009817249:contracts/protocol/Move.mainnet.toml:4:published-at = "0xa45b8ffca59e5b44ec7c04481a04cb620b0e07b2b183527bca4e5f32372c5f1a"
+2425b5b8b107bda10f4fa04517eb3cc009817249:contracts/protocol/Move.toml:4:published-at = "0xa45b8ffca59e5b44ec7c04481a04cb620b0e07b2b183527bca4e5f32372c5f1a"
+```
+
+Command evidence (run in the full temporary clone):
+
+```powershell
+git fetch --all --tags --prune
+git for-each-ref --format='%(refname)'
+git rev-list --all
+$commits = git log --all --format='%H' -- contracts/protocol/Move.toml contracts/protocol/Move.mainnet.toml | Sort-Object -Unique
+foreach ($sha in $commits) { git grep -n -F '0xa45b8ffca59e5b44ec7c04481a04cb620b0e07b2b183527bca4e5f32372c5f1a' $sha -- contracts/protocol/Move.toml contracts/protocol/Move.mainnet.toml }
+```
