@@ -95,6 +95,8 @@ Probe package:
 
 - Path: `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\scallop_move_probe`
 - Sui CLI: `sui 1.70.2-6d4ec0b0621d-dirty`
+- Sui executable: `C:\Users\NT\bin\sui.exe`
+- Sui executable SHA-256: `7BEC7E9D4FED878491A28952AD03C765293A6B7010A88197DBDE9B21CAE8C31F`
 
 Inspected protocol repository:
 
@@ -137,6 +139,18 @@ Consumable package and source layout:
 - `Version`: `protocol::version::Version` in `contracts/protocol/sources/version/version.move`
 - `MarketCoin`: `protocol::reserve::MarketCoin` in `contracts/protocol/sources/market/reserve.move`
 
+Current mainnet compatibility checks:
+
+- Current documented call package: `0xa45b8ffca59e5b44ec7c04481a04cb620b0e07b2b183527bca4e5f32372c5f1a`.
+- A `sui_getObject` mainnet RPC query confirmed that the current package contains the `mint` module.
+- The same query reported these type origins:
+  - `protocol::market::Market`: `0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf`
+  - `protocol::reserve::MarketCoin`: `0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf`
+  - `protocol::version::Version`: `0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf`
+- A `sui_getNormalizedMoveFunction` mainnet RPC query for `0xa45b...::mint::mint` matched the documented/source signature: `&Version`, `&mut Market`, `Coin<T>`, `&Clock`, `&mut TxContext` -> `Coin<MarketCoin<T>>`.
+- The cloned source therefore matches the current package's required type identities and function signature.
+- The cloned manifest's `published-at` value is still `0xde5c...`, not the current documented package `0xa45b...`. A normal mainnet compile proves source/interface compatibility, but it does not by itself prove that publishing Nexus would link the adapter call to the current `0xa45b...` package. Production implementation must resolve this package-linkage metadata before deployment.
+
 Dependency attempted:
 
 ```toml
@@ -154,7 +168,7 @@ Consider renaming the dependency to `protocol`.
 Compile command:
 
 ```powershell
-sui move build --path 'C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\scallop_move_probe'
+sui move build --path 'C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\scallop_move_probe' --build-env mainnet --force
 ```
 
 Compile result: **succeeded** (exit code 0).
@@ -172,13 +186,11 @@ INCLUDING DEPENDENCY Whitelist
 INCLUDING DEPENDENCY X
 INCLUDING DEPENDENCY XOracle
 BUILDING scallop_move_probe
-warning[W02021]: duplicate alias
-Unnecessary alias 'TxContext' for module member 'sui::tx_context::TxContext'. This alias is provided by default
 ```
 
 Import verification:
 
-- `mint`: **verified** - `protocol::mint::mint` was imported and called by the compiled `supply<T>` probe.
-- `Market`: **verified** - `protocol::market::Market` compiled in the probe function signature.
-- `Version`: **verified** - `protocol::version::Version` compiled in the probe function signature.
-- `MarketCoin`: **verified** - `protocol::reserve::MarketCoin` compiled in the `Coin<MarketCoin<T>>` return type.
+- `mint`: **verified** - `protocol::mint::mint<SUI>` was called by the compiled `supply_sui` probe.
+- `Market`: **verified** - `protocol::market::Market` compiled in the concrete SUI probe function signature.
+- `Version`: **verified** - `protocol::version::Version` compiled in the concrete SUI probe function signature.
+- `MarketCoin`: **verified** - `protocol::reserve::MarketCoin` compiled in the `Coin<MarketCoin<SUI>>` return type.
