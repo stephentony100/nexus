@@ -196,6 +196,30 @@ Source-equivalence scope: this is official source, so no fork diff is needed; la
 - immutable revision: `2425b5b8b107bda10f4fa04517eb3cc009817249`
 - build environment: `mainnet`
 
+Exact probe `Move.toml`:
+
+```toml
+[package]
+name = "scallop_linkage_probe"
+edition = "2024.beta"
+
+[dependencies]
+protocol = { git = "https://github.com/scallop-io/sui-lending-protocol.git", subdir = "contracts/protocol", rev = "2425b5b8b107bda10f4fa04517eb3cc009817249" }
+
+[addresses]
+scallop_linkage_probe = "0x0"
+```
+
+Resolved `Move.lock` pin for `ScallopProtocol`:
+
+```toml
+[pinned.mainnet.ScallopProtocol]
+source = { git = "https://github.com/scallop-io/sui-lending-protocol.git", subdir = 'contracts\protocol', rev = "2425b5b8b107bda10f4fa04517eb3cc009817249" }
+use_environment = "mainnet"
+manifest_digest = "08503294DDA2C6B947453F99A652633B5F9449D226019A80216E04DEFC406CA8"
+deps = { CoinDecimalsRegistry = "CoinDecimalsRegistry", Math = "Math", Sui = "Sui_1", Whitelist = "Whitelist", X = "X", XOracle = "XOracle" }
+```
+
 Exact probe source:
 
 ```move
@@ -228,6 +252,7 @@ public fun supply_probe(
 Build command:
 
 ```powershell
+$probe = Join-Path $env:TEMP 'nexus-scallop-linkage\scallop_linkage_probe'
 sui move build --path $probe --build-env mainnet
 ```
 
