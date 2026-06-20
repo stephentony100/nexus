@@ -88,3 +88,97 @@ SDK implication for Nexus:
 
 - ActionFlow can later use the SDK's address lookup keys and PTB argument order validated here; concrete object IDs still come from Scallop package-address docs/config.
 - The SDK alone does not solve Move-side `MarketCoin<SUI>` type coupling inside `PolicyObject`.
+
+## Move Dependency Probe
+
+Probe package:
+
+- Path: `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\scallop_move_probe`
+- Sui CLI: `sui 1.70.2-6d4ec0b0621d-dirty`
+
+Inspected protocol repository:
+
+- URL: `https://github.com/scallop-io/sui-lending-protocol.git`
+- Exact commit: `334e93a1232a1d9417466080ae24491be3f7b27c`
+- Commit command: `git -c safe.directory='C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol' -c core.excludesFile= -C 'C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol' rev-parse HEAD`
+
+Exact `Move.toml` paths found:
+
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\libs\coin_decimals_registry\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\libs\decimal\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\libs\math\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\libs\whitelist\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\libs\x\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\protocol\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\protocol_whitelist\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\query\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\sui_x_oracle\custom_afsui_rule\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\sui_x_oracle\custom_hasui_rule\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\sui_x_oracle\pyth_rule\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\sui_x_oracle\pyth_rule\vendors\pyth\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\sui_x_oracle\pyth_rule\vendors\wormhole\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\sui_x_oracle\supra_rule\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\sui_x_oracle\supra_rule\vendors\supra_oracle\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\sui_x_oracle\switchboard_on_demand_rule\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\sui_x_oracle\switchboard_rule\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\sui_x_oracle\switchboard_rule\vendors\switchboard_std\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\sui_x_oracle\switchboard_rule\vendors\switchboard_std_test\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\sui_x_oracle\x_oracle\Move.toml`
+- `C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\sui-lending-protocol\contracts\test_coin\Move.toml`
+
+Consumable package and source layout:
+
+- Manifest: `contracts/protocol/Move.toml`
+- Manifest package name: `ScallopProtocol`
+- Named address: `protocol = "0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf"`
+- Published-at address: `0xde5c09ad171544aa3724dc67216668c80e754860f419136a68d78504eb2e2805`
+- `mint`: `protocol::mint::mint` in `contracts/protocol/sources/user/mint.move`
+- `Market`: `protocol::market::Market` in `contracts/protocol/sources/market/market.move`
+- `Version`: `protocol::version::Version` in `contracts/protocol/sources/version/version.move`
+- `MarketCoin`: `protocol::reserve::MarketCoin` in `contracts/protocol/sources/market/reserve.move`
+
+Dependency attempted:
+
+```toml
+[dependencies]
+protocol = { git = "https://github.com/scallop-io/sui-lending-protocol.git", subdir = "contracts/protocol", rev = "334e93a1232a1d9417466080ae24491be3f7b27c" }
+```
+
+The current Sui CLI requires the dependency key `protocol`. The initial key `ScallopProtocol` failed before compilation with:
+
+```text
+In Move.toml, the dependency `ScallopProtocol` refers to a package named `protocol`.
+Consider renaming the dependency to `protocol`.
+```
+
+Compile command:
+
+```powershell
+sui move build --path 'C:\Users\NT\AppData\Local\Temp\nexus-scallop-probe\scallop_move_probe'
+```
+
+Compile result: **succeeded** (exit code 0).
+
+Relevant output:
+
+```text
+INCLUDING DEPENDENCY CoinDecimalsRegistry
+INCLUDING DEPENDENCY Decimal
+INCLUDING DEPENDENCY Math
+INCLUDING DEPENDENCY MoveStdlib
+INCLUDING DEPENDENCY ScallopProtocol
+INCLUDING DEPENDENCY Sui
+INCLUDING DEPENDENCY Whitelist
+INCLUDING DEPENDENCY X
+INCLUDING DEPENDENCY XOracle
+BUILDING scallop_move_probe
+warning[W02021]: duplicate alias
+Unnecessary alias 'TxContext' for module member 'sui::tx_context::TxContext'. This alias is provided by default
+```
+
+Import verification:
+
+- `mint`: **verified** - `protocol::mint::mint` was imported and called by the compiled `supply<T>` probe.
+- `Market`: **verified** - `protocol::market::Market` compiled in the probe function signature.
+- `Version`: **verified** - `protocol::version::Version` compiled in the probe function signature.
+- `MarketCoin`: **verified** - `protocol::reserve::MarketCoin` compiled in the `Coin<MarketCoin<T>>` return type.
