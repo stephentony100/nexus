@@ -194,3 +194,30 @@ Import verification:
 - `Market`: **verified** - `protocol::market::Market` compiled in the concrete SUI probe function signature.
 - `Version`: **verified** - `protocol::version::Version` compiled in the concrete SUI probe function signature.
 - `MarketCoin`: **verified** - `protocol::reserve::MarketCoin` compiled in the `Coin<MarketCoin<SUI>>` return type.
+
+## Decision
+
+Status: REVISE
+
+The Scallop Move interface and concrete SUI supply call compile successfully, but the official repository revision does not expose production linkage metadata for the current documented package.
+
+Verified interface:
+
+- Move dependency: `https://github.com/scallop-io/sui-lending-protocol.git`, subdir `contracts/protocol`, rev `334e93a1232a1d9417466080ae24491be3f7b27c`.
+- `mint`: `protocol::mint::mint<SUI>`.
+- `Market`: `protocol::market::Market`.
+- `Version`: `protocol::version::Version`.
+- `MarketCoin`: `protocol::reserve::MarketCoin<SUI>`.
+
+Blocking mismatch:
+
+- Current documented call package: `0xa45b8ffca59e5b44ec7c04481a04cb620b0e07b2b183527bca4e5f32372c5f1a`.
+- Official source manifest `published-at`: `0xde5c09ad171544aa3724dc67216668c80e754860f419136a68d78504eb2e2805`.
+- Required type origin: `0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf`.
+
+Do not implement the production adapter until Nexus has a reproducible dependency configuration that links the compiled `protocol::mint::mint<SUI>` call to the current `0xa45b...` package.
+
+Required next step:
+
+- Obtain an official Scallop source revision/manifest whose `published-at` is the current package, or
+- prove and document a Sui package-management configuration that binds the official source/type origin to current package `0xa45b...` without maintaining an unsafe handwritten interface.
