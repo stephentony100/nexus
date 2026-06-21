@@ -26,6 +26,7 @@ module nexus_agent_wallet::policy {
     const ETotalBudgetExceeded: u64 = 12;
     const EDepositMismatch: u64 = 13;
     const EInsufficientVaultBalance: u64 = 14;
+    const EScallopReceiptPolicyMismatch: u64 = 15;
 
     public struct PolicyObject has key {
         id: UID,
@@ -101,6 +102,7 @@ module nexus_agent_wallet::policy {
     }
 
     public struct ScallopSupplyReceipt {
+        policy_id: address,
         amount: u64,
         walrus_blob_id: vector<u8>,
         timestamp_ms: u64,
@@ -268,6 +270,7 @@ module nexus_agent_wallet::policy {
         let supplied_balance = balance::split(&mut policy.vault, amount);
         let supplied_coin = coin::from_balance(supplied_balance, ctx);
         let receipt = ScallopSupplyReceipt {
+            policy_id: object::uid_to_address(&policy.id),
             amount,
             walrus_blob_id,
             timestamp_ms: clock::timestamp_ms(clock),
@@ -280,7 +283,8 @@ module nexus_agent_wallet::policy {
         market_coin: Coin<MarketCoin<SUI>>,
         receipt: ScallopSupplyReceipt,
     ) {
-        let ScallopSupplyReceipt { amount, walrus_blob_id, timestamp_ms } = receipt;
+        let ScallopSupplyReceipt { policy_id, amount, walrus_blob_id, timestamp_ms } = receipt;
+        assert!(policy_id == object::uid_to_address(&policy.id), EScallopReceiptPolicyMismatch);
         balance::join(&mut policy.scallop_sui_position, coin::into_balance(market_coin));
         policy.spent_total = policy.spent_total + amount;
 

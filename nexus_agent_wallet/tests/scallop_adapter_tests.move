@@ -2,6 +2,8 @@
 module nexus_agent_wallet::scallop_adapter_tests {
     use nexus_agent_wallet::policy::{Self, PolicyObject};
     use nexus_agent_wallet::scallop_adapter;
+    use protocol::reserve::MarketCoin;
+    use sui::balance;
     use sui::clock::{Self, Clock};
     use sui::coin::{Self, Coin};
     use sui::sui::SUI;
@@ -68,5 +70,31 @@ module nexus_agent_wallet::scallop_adapter_tests {
         coin::burn_for_testing(test::take_from_sender<Coin<SUI>>(&scenario));
         clock::destroy_for_testing(clock);
         test::end(scenario);
+    }
+
+    #[test, expected_failure(abort_code = 15, location = nexus_agent_wallet::policy)]
+    fun scallop_supply_receipt_cannot_complete_against_another_policy() {
+        let mut scenario = test::begin(OWNER);
+        let mut clock = clock::create_for_testing(test::ctx(&mut scenario));
+        clock::set_for_testing(&mut clock, 1_000);
+        create_policy(&mut scenario, &clock);
+        create_policy(&mut scenario, &clock);
+
+        test::next_tx(&mut scenario, AGENT);
+        let mut destination_policy = take_policy(&scenario);
+        let mut source_policy = take_policy(&scenario);
+        let (sui_coin, receipt) = policy::prepare_scallop_supply(
+            &mut source_policy,
+            75,
+            b"walrus-blob-001",
+            &clock,
+            test::ctx(&mut scenario),
+        );
+        let supplied_amount = coin::burn_for_testing(sui_coin);
+        let market_balance = balance::create_for_testing<MarketCoin<SUI>>(supplied_amount);
+        let market_coin = coin::from_balance(market_balance, test::ctx(&mut scenario));
+
+        policy::complete_scallop_supply(&mut destination_policy, market_coin, receipt);
+        abort 99
     }
 }
