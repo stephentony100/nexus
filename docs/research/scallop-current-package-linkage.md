@@ -366,3 +366,23 @@ Attempt history:
 - The deterministic wrapper invocation above subsequently exited 0 within the same timeout and emitted usable JSON publication metadata. This definitive result supersedes the inconclusive earlier attempts.
 
 `CURRENT_SCALLOP_DEPENDENCY_RESOLVED`
+
+## Decision
+
+Status: GO
+
+- repository: `https://github.com/scallop-io/sui-lending-protocol.git`
+- subdirectory: `contracts/protocol`
+- immutable commit: `2425b5b8b107bda10f4fa04517eb3cc009817249`
+- call package: `0xa45b8ffca59e5b44ec7c04481a04cb620b0e07b2b183527bca4e5f32372c5f1a`
+- type origin: `0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf`
+- official source selected, no fork created
+- provenance verified
+- `mint<SUI>` compiled
+- `Balance<MarketCoin<SUI>>` compiled
+- publication linkage verified/current dependency resolved
+- next phase: supply-only `nexus_agent_wallet::scallop_adapter` implementation
+
+## Verification
+
+`sui move test` in `nexus_agent_wallet`: `Test result: OK. Total tests: 33; passed: 33; failed: 0`
