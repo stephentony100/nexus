@@ -89,6 +89,23 @@ module nexus_agent_wallet::policy {
         timestamp_ms: u64,
     }
 
+    public struct ScallopSuiSupplied has copy, drop {
+        policy_id: address,
+        agent: address,
+        amount: u64,
+        spent_total: u64,
+        vault_balance: u64,
+        scallop_position_balance: u64,
+        walrus_blob_id: vector<u8>,
+        timestamp_ms: u64,
+    }
+
+    public struct ScallopSupplyReceipt {
+        amount: u64,
+        walrus_blob_id: vector<u8>,
+        timestamp_ms: u64,
+    }
+
     public entry fun create_policy(
         agent: address,
         max_total_budget: u64,
@@ -228,6 +245,54 @@ module nexus_agent_wallet::policy {
             amount,
             remaining_balance: balance::value(&policy.vault),
             timestamp_ms: clock::timestamp_ms(clock),
+        });
+    }
+
+    public(package) fun prepare_scallop_supply(
+        policy: &mut PolicyObject,
+        amount: u64,
+        walrus_blob_id: vector<u8>,
+        clock: &Clock,
+        ctx: &mut TxContext,
+    ): (Coin<SUI>, ScallopSupplyReceipt) {
+        assert_agent(policy, ctx);
+        assert!(!policy.paused, EPolicyPaused);
+        assert!(!policy.revoked, EPolicyRevoked);
+        assert_not_expired(policy, clock);
+        assert!(is_protocol_allowed(policy, &b"scallop"), EProtocolNotAllowed);
+        assert!(amount > 0, EZeroAmount);
+        assert!(amount <= policy.max_single_tx, ESingleTxLimitExceeded);
+        assert!(amount <= policy.max_total_budget - policy.spent_total, ETotalBudgetExceeded);
+        assert!(amount <= balance::value(&policy.vault), EInsufficientVaultBalance);
+
+        let supplied_balance = balance::split(&mut policy.vault, amount);
+        let supplied_coin = coin::from_balance(supplied_balance, ctx);
+        let receipt = ScallopSupplyReceipt {
+            amount,
+            walrus_blob_id,
+            timestamp_ms: clock::timestamp_ms(clock),
+        };
+        (supplied_coin, receipt)
+    }
+
+    public(package) fun complete_scallop_supply(
+        policy: &mut PolicyObject,
+        market_coin: Coin<MarketCoin<SUI>>,
+        receipt: ScallopSupplyReceipt,
+    ) {
+        let ScallopSupplyReceipt { amount, walrus_blob_id, timestamp_ms } = receipt;
+        balance::join(&mut policy.scallop_sui_position, coin::into_balance(market_coin));
+        policy.spent_total = policy.spent_total + amount;
+
+        event::emit(ScallopSuiSupplied {
+            policy_id: object::uid_to_address(&policy.id),
+            agent: policy.agent,
+            amount,
+            spent_total: policy.spent_total,
+            vault_balance: balance::value(&policy.vault),
+            scallop_position_balance: balance::value(&policy.scallop_sui_position),
+            walrus_blob_id,
+            timestamp_ms,
         });
     }
 
