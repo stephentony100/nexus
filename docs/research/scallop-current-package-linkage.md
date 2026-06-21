@@ -377,9 +377,11 @@ Status: GO
 - call package: `0xa45b8ffca59e5b44ec7c04481a04cb620b0e07b2b183527bca4e5f32372c5f1a`
 - type origin: `0xefe8b36d5b2e43728cc323298626b83177803521d195cfb11e15b910e892fddf`
 - official source selected, no fork created
+- source equivalence: official source; no fork diff required
 - provenance verified
 - `mint<SUI>` compiled
 - `Balance<MarketCoin<SUI>>` compiled
+- build result: succeeded
 - publication linkage verified/current dependency resolved
 - next phase: supply-only `nexus_agent_wallet::scallop_adapter` implementation
 
