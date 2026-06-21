@@ -4,6 +4,72 @@
 [move]
 version = 4
 
+[pinned.mainnet.CoinDecimalsRegistry]
+source = { git = "https://github.com/scallop-io/sui-lending-protocol.git", subdir = 'contracts\libs\coin_decimals_registry', rev = "2425b5b8b107bda10f4fa04517eb3cc009817249" }
+use_environment = "mainnet"
+manifest_digest = "3876920E3F5449B657525E749B996C31141507452514AF2E259F5441554DCDDF"
+deps = { Sui = "Sui_1" }
+
+[pinned.mainnet.Math]
+source = { git = "https://github.com/scallop-io/sui-lending-protocol.git", subdir = 'contracts\libs\math', rev = "2425b5b8b107bda10f4fa04517eb3cc009817249" }
+use_environment = "mainnet"
+manifest_digest = "3876920E3F5449B657525E749B996C31141507452514AF2E259F5441554DCDDF"
+deps = { Sui = "Sui_1" }
+
+[pinned.mainnet.MoveStdlib]
+source = { git = "https://github.com/MystenLabs/sui.git", subdir = 'crates\sui-framework\packages\move-stdlib', rev = "c2428b3aaf9c24270b609001e56d96cb10c76d28" }
+use_environment = "mainnet"
+manifest_digest = "C4FE4C91DE74CBF223B2E380AE40F592177D21870DC2D7EB6227D2D694E05363"
+deps = {}
+
+[pinned.mainnet.MoveStdlib_1]
+source = { git = "https://github.com/MystenLabs/sui.git", subdir = 'crates\sui-framework\packages\move-stdlib', rev = "1f6e1e6dd72dc75ac4037b3d4e38e73b133c5ef6" }
+use_environment = "mainnet"
+manifest_digest = "C4FE4C91DE74CBF223B2E380AE40F592177D21870DC2D7EB6227D2D694E05363"
+deps = {}
+
+[pinned.mainnet.ScallopProtocol]
+source = { git = "https://github.com/scallop-io/sui-lending-protocol.git", subdir = 'contracts\protocol', rev = "2425b5b8b107bda10f4fa04517eb3cc009817249" }
+use_environment = "mainnet"
+manifest_digest = "08503294DDA2C6B947453F99A652633B5F9449D226019A80216E04DEFC406CA8"
+deps = { CoinDecimalsRegistry = "CoinDecimalsRegistry", Math = "Math", Sui = "Sui_1", Whitelist = "Whitelist", X = "X", XOracle = "XOracle" }
+
+[pinned.mainnet.Sui]
+source = { git = "https://github.com/MystenLabs/sui.git", subdir = 'crates\sui-framework\packages\sui-framework', rev = "c2428b3aaf9c24270b609001e56d96cb10c76d28" }
+use_environment = "mainnet"
+manifest_digest = "CD547CB1ACCE0880C835DAED2D8FFCB91D56C833AE5240D3AA5B918398263195"
+deps = { MoveStdlib = "MoveStdlib" }
+
+[pinned.mainnet.Sui_1]
+source = { git = "https://github.com/MystenLabs/sui.git", subdir = 'crates\sui-framework\packages\sui-framework', rev = "1f6e1e6dd72dc75ac4037b3d4e38e73b133c5ef6" }
+use_environment = "mainnet"
+manifest_digest = "CD547CB1ACCE0880C835DAED2D8FFCB91D56C833AE5240D3AA5B918398263195"
+deps = { MoveStdlib = "MoveStdlib_1" }
+
+[pinned.mainnet.Whitelist]
+source = { git = "https://github.com/scallop-io/sui-lending-protocol.git", subdir = 'contracts\libs\whitelist', rev = "2425b5b8b107bda10f4fa04517eb3cc009817249" }
+use_environment = "mainnet"
+manifest_digest = "3876920E3F5449B657525E749B996C31141507452514AF2E259F5441554DCDDF"
+deps = { Sui = "Sui_1" }
+
+[pinned.mainnet.X]
+source = { git = "https://github.com/scallop-io/sui-lending-protocol.git", subdir = 'contracts\libs\x', rev = "2425b5b8b107bda10f4fa04517eb3cc009817249" }
+use_environment = "mainnet"
+manifest_digest = "3876920E3F5449B657525E749B996C31141507452514AF2E259F5441554DCDDF"
+deps = { Sui = "Sui_1" }
+
+[pinned.mainnet.XOracle]
+source = { git = "https://github.com/scallop-io/sui-lending-protocol.git", subdir = 'contracts\sui_x_oracle\x_oracle', rev = "2425b5b8b107bda10f4fa04517eb3cc009817249" }
+use_environment = "mainnet"
+manifest_digest = "3876920E3F5449B657525E749B996C31141507452514AF2E259F5441554DCDDF"
+deps = { Sui = "Sui_1" }
+
+[pinned.mainnet.nexus_agent_wallet]
+source = { root = true }
+use_environment = "mainnet"
+manifest_digest = "46C72BBF5DA0533B645F68A6DF8B5904FA37F943EDB0B4C8A9A4FB2A0D9D05C0"
+deps = { protocol = "ScallopProtocol", std = "MoveStdlib", sui = "Sui" }
+
 [pinned.testnet.MoveStdlib]
 source = { git = "https://github.com/MystenLabs/sui.git", subdir = 'crates\sui-framework\packages\move-stdlib', rev = "c2428b3aaf9c24270b609001e56d96cb10c76d28" }
 use_environment = "testnet"
