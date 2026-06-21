@@ -9,6 +9,7 @@ module nexus_agent_wallet::policy {
     use sui::sui::SUI;
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
+    use protocol::reserve::MarketCoin;
 
     const EInvalidBudget: u64 = 0;
     const EInvalidSingleTxLimit: u64 = 1;
@@ -33,6 +34,7 @@ module nexus_agent_wallet::policy {
         max_total_budget: u64,
         spent_total: u64,
         vault: Balance<SUI>,
+        scallop_sui_position: Balance<MarketCoin<SUI>>,
         max_single_tx: u64,
         allowed_protocols: vector<vector<u8>>,
         expires_at_ms: u64,
@@ -113,6 +115,7 @@ module nexus_agent_wallet::policy {
             max_total_budget,
             spent_total: 0,
             vault: coin::into_balance(initial_deposit),
+            scallop_sui_position: balance::zero(),
             max_single_tx,
             allowed_protocols,
             expires_at_ms,
@@ -238,6 +241,10 @@ module nexus_agent_wallet::policy {
 
     public fun vault_balance(policy: &PolicyObject): u64 { balance::value(&policy.vault) }
 
+    public fun scallop_sui_position_balance(policy: &PolicyObject): u64 {
+        balance::value(&policy.scallop_sui_position)
+    }
+
     public fun max_single_tx(policy: &PolicyObject): u64 { policy.max_single_tx }
 
     public fun expires_at_ms(policy: &PolicyObject): u64 { policy.expires_at_ms }
@@ -277,6 +284,7 @@ module nexus_agent_wallet::policy {
             max_total_budget: _,
             spent_total: _,
             vault,
+            scallop_sui_position,
             max_single_tx: _,
             allowed_protocols: _,
             expires_at_ms: _,
@@ -285,6 +293,7 @@ module nexus_agent_wallet::policy {
             created_at_ms: _,
         } = policy;
         balance::destroy_for_testing(vault);
+        balance::destroy_for_testing(scallop_sui_position);
         object::delete(id);
     }
 }

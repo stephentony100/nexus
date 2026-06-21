@@ -52,6 +52,7 @@ module nexus_agent_wallet::policy_tests {
         assert!(policy::expires_at_ms(&policy_obj) == 31_000, 5);
         assert!(policy::created_at_ms(&policy_obj) == 1_000, 6);
         assert!(policy::vault_balance(&policy_obj) == 500, 13);
+        assert!(policy::scallop_sui_position_balance(&policy_obj) == 0, 14);
         assert!(!policy::paused(&policy_obj), 7);
         assert!(!policy::revoked(&policy_obj), 8);
         assert!(policy::allowed_protocol_count(&policy_obj) == 2, 9);
