@@ -1,6 +1,6 @@
-# Scallop SUI Supply Adapter Implementation Plan
+﻿# Scallop SUI Supply Adapter Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add a supply-only on-chain Scallop adapter that atomically debits policy-custodied SUI, calls Scallop mint<SUI>, stores Balance<MarketCoin<SUI>> in PolicyObject, updates spent_total after mint succeeds, and emits an auditable event.
 
@@ -43,7 +43,7 @@ No TypeScript files change in this phase.
 - Modify: nexus_agent_wallet/Move.toml
 - Create: nexus_agent_wallet/Move.lock
 
-- [ ] **Step 1: Add the immutable dependency**
+- [x] **Step 1: Add the immutable dependency**
 
 Update nexus_agent_wallet/Move.toml to:
 
@@ -59,7 +59,7 @@ protocol = { git = "https://github.com/scallop-io/sui-lending-protocol.git", sub
 nexus_agent_wallet = "0x0"
 ~~~
 
-- [ ] **Step 2: Generate the mainnet lock and compile**
+- [x] **Step 2: Generate the mainnet lock and compile**
 
 Run:
 
@@ -71,7 +71,7 @@ Working directory: nexus_agent_wallet
 
 Expected: build succeeds and includes ScallopProtocol.
 
-- [ ] **Step 3: Verify immutable lock revisions**
+- [x] **Step 3: Verify immutable lock revisions**
 
 Run:
 
@@ -88,7 +88,7 @@ if (-not $lock.Contains('2425b5b8b107bda10f4fa04517eb3cc009817249')) {
 
 Expected: every Git revision is an immutable 40-character SHA.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ~~~powershell
 git add nexus_agent_wallet/Move.toml nexus_agent_wallet/Move.lock
@@ -103,7 +103,7 @@ git commit -m "build: add pinned Scallop Move dependency"
 - Modify: nexus_agent_wallet/sources/policy.move
 - Modify: nexus_agent_wallet/tests/policy_tests.move
 
-- [ ] **Step 1: Write the failing zero-position assertion**
+- [x] **Step 1: Write the failing zero-position assertion**
 
 In create_policy_stores_owner_agent_limits_and_timing, add:
 
@@ -111,7 +111,7 @@ In create_policy_stores_owner_agent_limits_and_timing, add:
 assert!(policy::scallop_sui_position_balance(&policy_obj) == 0, 14);
 ~~~
 
-- [ ] **Step 2: Run the focused test and verify failure**
+- [x] **Step 2: Run the focused test and verify failure**
 
 Run:
 
@@ -123,7 +123,7 @@ Working directory: nexus_agent_wallet
 
 Expected: compile fails because scallop_sui_position_balance is not defined.
 
-- [ ] **Step 3: Add Scallop state and accessor**
+- [x] **Step 3: Add Scallop state and accessor**
 
 In policy.move:
 
@@ -165,7 +165,7 @@ and:
 balance::destroy_for_testing(scallop_sui_position);
 ~~~
 
-- [ ] **Step 4: Run the focused test**
+- [x] **Step 4: Run the focused test**
 
 ~~~powershell
 sui move test --build-env mainnet create_policy_stores_owner_agent_limits_and_timing
@@ -173,7 +173,7 @@ sui move test --build-env mainnet create_policy_stores_owner_agent_limits_and_ti
 
 Expected: focused test passes.
 
-- [ ] **Step 5: Run all existing tests**
+- [x] **Step 5: Run all existing tests**
 
 ~~~powershell
 sui move test --build-env mainnet
@@ -181,7 +181,7 @@ sui move test --build-env mainnet
 
 Expected: 33 passed, 0 failed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ~~~powershell
 git add nexus_agent_wallet/sources/policy.move nexus_agent_wallet/tests/policy_tests.move
@@ -197,7 +197,7 @@ git commit -m "feat: add policy-owned Scallop SUI position"
 - Create: nexus_agent_wallet/sources/scallop_adapter.move
 - Create: nexus_agent_wallet/tests/scallop_adapter_tests.move
 
-- [ ] **Step 1: Write the failing happy-path test**
+- [x] **Step 1: Write the failing happy-path test**
 
 Create nexus_agent_wallet/tests/scallop_adapter_tests.move with the shared helpers and happy-path test below:
 
@@ -286,7 +286,7 @@ module nexus_agent_wallet::scallop_adapter_tests {
 }
 ~~~
 
-- [ ] **Step 2: Run the focused test and verify failure**
+- [x] **Step 2: Run the focused test and verify failure**
 
 Run from nexus_agent_wallet:
 
@@ -296,7 +296,7 @@ sui move test --build-env mainnet supply_sui_custodies_position_updates_accounti
 
 Expected: compile fails because nexus_agent_wallet::scallop_adapter does not exist.
 
-- [ ] **Step 3: Add the receipt, event, and policy helpers**
+- [x] **Step 3: Add the receipt, event, and policy helpers**
 
 In policy.move, add the Scallop event and the non-droppable package receipt after FundsWithdrawn:
 
@@ -374,7 +374,7 @@ public(package) fun complete_scallop_supply(
 
 The receipt has no abilities. Code in this package cannot debit the vault and silently discard the receipt; it must either complete the supply or abort, which rolls back the transaction. spent_total changes only in complete_scallop_supply, after a MarketCoin has been returned.
 
-- [ ] **Step 4: Add the production adapter and test-only mint substitute**
+- [x] **Step 4: Add the production adapter and test-only mint substitute**
 
 Create nexus_agent_wallet/sources/scallop_adapter.move:
 
@@ -441,7 +441,7 @@ module nexus_agent_wallet::scallop_adapter {
 }
 ~~~
 
-- [ ] **Step 5: Run the focused test**
+- [x] **Step 5: Run the focused test**
 
 ~~~powershell
 sui move test --build-env mainnet supply_sui_custodies_position_updates_accounting_and_leaves_idle_sui_withdrawable
@@ -449,7 +449,7 @@ sui move test --build-env mainnet supply_sui_custodies_position_updates_accounti
 
 Expected: 1 passed, 0 failed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ~~~powershell
 git add nexus_agent_wallet/sources/policy.move nexus_agent_wallet/sources/scallop_adapter.move nexus_agent_wallet/tests/scallop_adapter_tests.move
@@ -463,7 +463,7 @@ git commit -m "feat: add atomic Scallop SUI supply adapter"
 **Files:**
 - Modify: nexus_agent_wallet/tests/scallop_adapter_tests.move
 
-- [ ] **Step 1: Add the nine exact failure tests**
+- [x] **Step 1: Add the nine exact failure tests**
 
 Append these tests inside scallop_adapter_tests.move:
 
@@ -584,7 +584,7 @@ fun supply_sui_rejects_amount_above_idle_vault_balance() {
 
 The trailing abort 99 makes an unexpected successful call fail the test instead of silently passing. Expected failures name nexus_agent_wallet::policy because every rejection occurs in prepare_scallop_supply before any external protocol call.
 
-- [ ] **Step 2: Run the adapter test module**
+- [x] **Step 2: Run the adapter test module**
 
 ~~~powershell
 sui move test --build-env mainnet scallop_adapter_tests
@@ -592,7 +592,7 @@ sui move test --build-env mainnet scallop_adapter_tests
 
 Expected: 10 passed, 0 failed.
 
-- [ ] **Step 3: Run the complete Move suite**
+- [x] **Step 3: Run the complete Move suite**
 
 ~~~powershell
 sui move test --build-env mainnet
@@ -600,7 +600,7 @@ sui move test --build-env mainnet
 
 Expected: 43 passed, 0 failed.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ~~~powershell
 git add nexus_agent_wallet/tests/scallop_adapter_tests.move
@@ -619,7 +619,7 @@ git commit -m "test: cover Scallop supply policy guards"
 - Verify: nexus_agent_wallet/tests/policy_tests.move
 - Verify: nexus_agent_wallet/tests/scallop_adapter_tests.move
 
-- [ ] **Step 1: Run a clean production build**
+- [x] **Step 1: Run a clean production build**
 
 Run from nexus_agent_wallet:
 
@@ -629,7 +629,7 @@ sui move build --build-env mainnet
 
 Expected: build succeeds; nexus_agent_wallet::scallop_adapter compiles against protocol::mint::mint<SUI>.
 
-- [ ] **Step 2: Run all tests from a fresh command**
+- [x] **Step 2: Run all tests from a fresh command**
 
 ~~~powershell
 sui move test --build-env mainnet
@@ -637,7 +637,7 @@ sui move test --build-env mainnet
 
 Expected: Test result: OK. Total tests: 43; passed: 43; failed: 0.
 
-- [ ] **Step 3: Re-verify immutable dependency linkage**
+- [x] **Step 3: Re-verify immutable dependency linkage**
 
 ~~~powershell
 $lock = Get-Content -Raw .\Move.lock
@@ -652,7 +652,7 @@ if (-not $manifest.Contains('https://github.com/scallop-io/sui-lending-protocol.
 
 Expected: no floating revisions and the official Scallop SHA is present.
 
-- [ ] **Step 4: Verify scope and whitespace**
+- [x] **Step 4: Verify scope and whitespace**
 
 Run from the repository root:
 
@@ -674,7 +674,7 @@ nexus_agent_wallet/tests/scallop_adapter_tests.move
 
 The branch may also contain this implementation plan if execution starts from its documentation commit. No TypeScript, redeem, DeepBook, oracle, scheduler, API, or frontend files should change.
 
-- [ ] **Step 5: Inspect the final commit series**
+- [x] **Step 5: Inspect the final commit series**
 
 ~~~powershell
 git log --oneline main..HEAD
