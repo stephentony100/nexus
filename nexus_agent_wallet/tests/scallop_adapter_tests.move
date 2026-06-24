@@ -30,6 +30,41 @@ module nexus_agent_wallet::scallop_adapter_tests {
         );
     }
 
+    fun create_policy_with(
+        scenario: &mut test::Scenario,
+        clock: &Clock,
+        allowed_protocols: vector<vector<u8>>,
+        max_total_budget: u64,
+        max_single_tx: u64,
+        expires_at_ms: u64,
+    ) {
+        policy::create_policy(
+            AGENT,
+            max_total_budget,
+            max_single_tx,
+            allowed_protocols,
+            expires_at_ms,
+            mint_deposit(scenario, max_total_budget),
+            clock,
+            test::ctx(scenario),
+        );
+    }
+
+    fun supply_amount(
+        scenario: &mut test::Scenario,
+        policy_obj: &mut PolicyObject,
+        amount: u64,
+        clock: &Clock,
+    ) {
+        scallop_adapter::supply_sui_for_testing(
+            policy_obj,
+            amount,
+            b"walrus-blob-001",
+            clock,
+            test::ctx(scenario),
+        );
+    }
+
     fun take_policy(scenario: &test::Scenario): PolicyObject {
         test::take_shared<PolicyObject>(scenario)
     }
@@ -95,6 +130,119 @@ module nexus_agent_wallet::scallop_adapter_tests {
         let market_coin = coin::from_balance(market_balance, test::ctx(&mut scenario));
 
         policy::complete_scallop_supply(&mut destination_policy, market_coin, receipt);
+        abort 99
+    }
+
+    #[test, expected_failure(abort_code = 5, location = nexus_agent_wallet::policy)]
+    fun supply_sui_rejects_non_agent() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        create_policy_with(&mut scenario, &clock, vector[b"scallop"], 500, 100, 31_000);
+        test::next_tx(&mut scenario, OTHER);
+        let mut policy_obj = take_policy(&scenario);
+        supply_amount(&mut scenario, &mut policy_obj, 75, &clock);
+        abort 99
+    }
+
+    #[test, expected_failure(abort_code = 6, location = nexus_agent_wallet::policy)]
+    fun supply_sui_rejects_paused_policy() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        create_policy_with(&mut scenario, &clock, vector[b"scallop"], 500, 100, 31_000);
+        test::next_tx(&mut scenario, OWNER);
+        let mut policy_obj = take_policy(&scenario);
+        policy::pause_policy(&mut policy_obj, &clock, test::ctx(&mut scenario));
+        test::return_shared(policy_obj);
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = take_policy(&scenario);
+        supply_amount(&mut scenario, &mut policy_obj, 75, &clock);
+        abort 99
+    }
+
+    #[test, expected_failure(abort_code = 7, location = nexus_agent_wallet::policy)]
+    fun supply_sui_rejects_revoked_policy() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        create_policy_with(&mut scenario, &clock, vector[b"scallop"], 500, 100, 31_000);
+        test::next_tx(&mut scenario, OWNER);
+        let mut policy_obj = take_policy(&scenario);
+        policy::revoke_policy(&mut policy_obj, &clock, test::ctx(&mut scenario));
+        test::return_shared(policy_obj);
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = take_policy(&scenario);
+        supply_amount(&mut scenario, &mut policy_obj, 75, &clock);
+        abort 99
+    }
+
+    #[test, expected_failure(abort_code = 8, location = nexus_agent_wallet::policy)]
+    fun supply_sui_rejects_expired_policy() {
+        let mut scenario = test::begin(OWNER);
+        let mut clock = clock::create_for_testing(test::ctx(&mut scenario));
+        create_policy_with(&mut scenario, &clock, vector[b"scallop"], 500, 100, 31_000);
+        clock::set_for_testing(&mut clock, 31_001);
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = take_policy(&scenario);
+        supply_amount(&mut scenario, &mut policy_obj, 75, &clock);
+        abort 99
+    }
+
+    #[test, expected_failure(abort_code = 9, location = nexus_agent_wallet::policy)]
+    fun supply_sui_requires_scallop_allowlist_entry() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        create_policy_with(&mut scenario, &clock, vector[b"deepbook"], 500, 100, 31_000);
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = take_policy(&scenario);
+        supply_amount(&mut scenario, &mut policy_obj, 75, &clock);
+        abort 99
+    }
+
+    #[test, expected_failure(abort_code = 10, location = nexus_agent_wallet::policy)]
+    fun supply_sui_rejects_zero_amount() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        create_policy_with(&mut scenario, &clock, vector[b"scallop"], 500, 100, 31_000);
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = take_policy(&scenario);
+        supply_amount(&mut scenario, &mut policy_obj, 0, &clock);
+        abort 99
+    }
+
+    #[test, expected_failure(abort_code = 11, location = nexus_agent_wallet::policy)]
+    fun supply_sui_rejects_amount_above_single_tx_limit() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        create_policy_with(&mut scenario, &clock, vector[b"scallop"], 500, 100, 31_000);
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = take_policy(&scenario);
+        supply_amount(&mut scenario, &mut policy_obj, 101, &clock);
+        abort 99
+    }
+
+    #[test, expected_failure(abort_code = 12, location = nexus_agent_wallet::policy)]
+    fun supply_sui_rejects_amount_above_remaining_budget() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        create_policy_with(&mut scenario, &clock, vector[b"scallop"], 500, 500, 31_000);
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = take_policy(&scenario);
+        supply_amount(&mut scenario, &mut policy_obj, 450, &clock);
+        supply_amount(&mut scenario, &mut policy_obj, 100, &clock);
+        abort 99
+    }
+
+    #[test, expected_failure(abort_code = 14, location = nexus_agent_wallet::policy)]
+    fun supply_sui_rejects_amount_above_idle_vault_balance() {
+        let mut scenario = test::begin(OWNER);
+        let clock = clock::create_for_testing(test::ctx(&mut scenario));
+        create_policy_with(&mut scenario, &clock, vector[b"scallop"], 500, 500, 31_000);
+        test::next_tx(&mut scenario, OWNER);
+        let mut policy_obj = take_policy(&scenario);
+        policy::owner_withdraw(&mut policy_obj, 450, &clock, test::ctx(&mut scenario));
+        test::return_shared(policy_obj);
+        test::next_tx(&mut scenario, AGENT);
+        let mut policy_obj = take_policy(&scenario);
+        supply_amount(&mut scenario, &mut policy_obj, 100, &clock);
         abort 99
     }
 }
