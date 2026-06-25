@@ -16,6 +16,13 @@ export interface PolicyAction {
   action: 'supply' | 'withdraw'
 }
 
+export interface ScallopConfig {
+  versionObjectId: string
+  marketObjectId: string
+  versionInitialSharedVersion?: string | number
+  marketInitialSharedVersion?: string | number
+}
+
 export interface FieldError {
   field: string
   reason: string
