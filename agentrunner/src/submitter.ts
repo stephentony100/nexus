@@ -1,7 +1,7 @@
 import type { Transaction } from '@mysten/sui/transactions'
 import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
-import type { ActionRecordedEvent, RunActionResult } from './types.js'
+import type { ActionRecordedEvent, RunActionResult, ScallopSuiSuppliedEvent } from './types.js'
 
 const MAX_ATTEMPTS = 3
 const RETRY_DELAY_MS = 300
@@ -29,11 +29,11 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-function parseActionRecordedEvent(events: { type: string; parsedJson: unknown }[]): ActionRecordedEvent | undefined {
-  const event = events.find((e) => e.type.endsWith('::policy::ActionRecorded'))
-  if (!event) return undefined
+type ParsedEvent =
+  | { kind: 'action_recorded'; event: ActionRecordedEvent }
+  | { kind: 'scallop_sui_supplied'; event: ScallopSuiSuppliedEvent }
 
-  const fields = event.parsedJson as Record<string, unknown>
+function parseActionRecordedEvent(fields: Record<string, unknown>): ActionRecordedEvent {
   return {
     policyId: String(fields.policy_id),
     agent: String(fields.agent),
@@ -43,6 +43,33 @@ function parseActionRecordedEvent(events: { type: string; parsedJson: unknown }[
     walrusBlobId: Buffer.from(fields.walrus_blob_id as number[]).toString('utf8'),
     timestampMs: String(fields.timestamp_ms),
   }
+}
+
+function parseScallopSuiSuppliedEvent(fields: Record<string, unknown>): ScallopSuiSuppliedEvent {
+  return {
+    policyId: String(fields.policy_id),
+    agent: String(fields.agent),
+    amount: String(fields.amount),
+    spentTotal: String(fields.spent_total),
+    vaultBalance: String(fields.vault_balance),
+    scallopPositionBalance: String(fields.scallop_position_balance),
+    walrusBlobId: Buffer.from(fields.walrus_blob_id as number[]).toString('utf8'),
+    timestampMs: String(fields.timestamp_ms),
+  }
+}
+
+function parseEvent(events: { type: string; parsedJson: unknown }[]): ParsedEvent | undefined {
+  const scallopEvent = events.find((e) => e.type.endsWith('::policy::ScallopSuiSupplied'))
+  if (scallopEvent) {
+    return { kind: 'scallop_sui_supplied', event: parseScallopSuiSuppliedEvent(scallopEvent.parsedJson as Record<string, unknown>) }
+  }
+
+  const actionEvent = events.find((e) => e.type.endsWith('::policy::ActionRecorded'))
+  if (actionEvent) {
+    return { kind: 'action_recorded', event: parseActionRecordedEvent(actionEvent.parsedJson as Record<string, unknown>) }
+  }
+
+  return undefined
 }
 
 export async function submitTransaction(
@@ -89,10 +116,13 @@ export async function submitTransaction(
     }
   }
 
-  const event = parseActionRecordedEvent(executeResult.events ?? [])
-  if (!event) {
+  const parsed = parseEvent(executeResult.events ?? [])
+  if (!parsed) {
     return { ok: false, status: 'event_missing', digest }
   }
 
-  return { ok: true, status: 'succeeded', digest, event }
+  if (parsed.kind === 'scallop_sui_supplied') {
+    return { ok: true, status: 'succeeded', digest, eventKind: 'scallop_sui_supplied', event: parsed.event }
+  }
+  return { ok: true, status: 'succeeded', digest, eventKind: 'action_recorded', event: parsed.event }
 }

@@ -7,6 +7,7 @@ import { submitTransaction } from './submitter.js'
 const BYTES = new Uint8Array([1, 2, 3])
 const SIGNER = {} as Ed25519Keypair
 const ACTION_RECORDED_TYPE = '0x' + '11'.repeat(32) + '::policy::ActionRecorded'
+const SCALLOP_SUI_SUPPLIED_TYPE = '0x' + '11'.repeat(32) + '::policy::ScallopSuiSupplied'
 
 function mockTx(): Transaction {
   return { build: vi.fn().mockResolvedValue(BYTES) } as unknown as Transaction
@@ -35,6 +36,22 @@ function actionRecordedEvent() {
   }
 }
 
+function scallopSuiSuppliedEvent() {
+  return {
+    type: SCALLOP_SUI_SUPPLIED_TYPE,
+    parsedJson: {
+      policy_id: '0xpolicy',
+      agent: '0xagent',
+      amount: '75',
+      spent_total: '175',
+      vault_balance: '425',
+      scallop_position_balance: '75',
+      walrus_blob_id: Array.from(new TextEncoder().encode('blob-id')),
+      timestamp_ms: '1700000000000',
+    },
+  }
+}
+
 function mockClient(
   dryRunTransactionBlock: ReturnType<typeof vi.fn>,
   signAndExecuteTransaction: ReturnType<typeof vi.fn>,
@@ -55,10 +72,36 @@ describe('submitTransaction', () => {
 
     expect(result.ok).toBe(true)
     if (result.ok) {
+      expect(result.eventKind).toBe('action_recorded')
       expect(result.digest).toBe('digest1')
-      expect(result.event.amount).toBe('50')
-      expect(result.event.protocolId).toBe('scallop')
-      expect(result.event.walrusBlobId).toBe('blob-id')
+      if (result.eventKind === 'action_recorded') {
+        expect(result.event.amount).toBe('50')
+        expect(result.event.protocolId).toBe('scallop')
+        expect(result.event.walrusBlobId).toBe('blob-id')
+      }
+    }
+  })
+
+  it('returns succeeded with a parsed ScallopSuiSupplied event when that event is emitted instead', async () => {
+    const dryRunTransactionBlock = vi.fn().mockResolvedValue(successDryRun())
+    const signAndExecuteTransaction = vi.fn().mockResolvedValue({
+      digest: 'digest5',
+      effects: { status: { status: 'success' } },
+      events: [scallopSuiSuppliedEvent()],
+    })
+
+    const result = await submitTransaction(mockTx(), SIGNER, mockClient(dryRunTransactionBlock, signAndExecuteTransaction))
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.eventKind).toBe('scallop_sui_supplied')
+      expect(result.digest).toBe('digest5')
+      if (result.eventKind === 'scallop_sui_supplied') {
+        expect(result.event.amount).toBe('75')
+        expect(result.event.vaultBalance).toBe('425')
+        expect(result.event.scallopPositionBalance).toBe('75')
+        expect(result.event.walrusBlobId).toBe('blob-id')
+      }
     }
   })
 
