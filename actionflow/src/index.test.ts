@@ -36,8 +36,8 @@ function validState(overrides: Partial<PolicyState> = {}): PolicyState {
 
 describe('translateAction', () => {
   it('returns action and ptbBytes on a full happy path', async () => {
-    vi.mocked(extractActionGoal).mockResolvedValue({ protocol: 'scallop', amount: 50, action: 'supply' })
-    vi.mocked(fetchPolicyState).mockResolvedValue(validState())
+    vi.mocked(extractActionGoal).mockResolvedValue({ protocol: 'deepbook', amount: 50, action: 'supply' })
+    vi.mocked(fetchPolicyState).mockResolvedValue(validState({ allowedProtocols: ['deepbook'] }))
 
     // A real SuiJsonRpcClient is used (rather than a bare {} stub) because
     // tx.build({ client }) calls client.core.resolveTransactionPlugin(), which
@@ -76,7 +76,7 @@ describe('translateAction', () => {
       },
     } as never)
 
-    const result = await translateAction('deposit 50 into scallop', {
+    const result = await translateAction('deposit 50 into deepbook', {
       policyId: POLICY_ID,
       packageId: PACKAGE_ID,
       walrusBlobId: 'placeholder-blob',
@@ -92,6 +92,25 @@ describe('translateAction', () => {
     }
   })
 
+  it('returns config_missing when a scallop supply goal has no scallop config', async () => {
+    vi.mocked(extractActionGoal).mockResolvedValue({ protocol: 'scallop', amount: 50, action: 'supply' })
+    vi.mocked(fetchPolicyState).mockResolvedValue(validState())
+
+    const result = await translateAction('deposit 50 into scallop', {
+      policyId: POLICY_ID,
+      packageId: PACKAGE_ID,
+      walrusBlobId: 'placeholder-blob',
+      client: {} as Anthropic,
+      suiClient: {} as SuiJsonRpcClient,
+    })
+
+    expect(result).toEqual({
+      ok: false,
+      status: 'config_missing',
+      reason: 'scallop config required for scallop supply',
+    })
+  })
+
   it('returns validation errors without building a PTB when budget is exceeded', async () => {
     vi.mocked(extractActionGoal).mockResolvedValue({ protocol: 'scallop', amount: 450, action: 'supply' })
     vi.mocked(fetchPolicyState).mockResolvedValue(validState({ spentTotal: 100, maxTotalBudget: 500, maxSingleTx: 500 }))
@@ -105,7 +124,7 @@ describe('translateAction', () => {
     })
 
     expect(result.ok).toBe(false)
-    if (!result.ok) {
+    if (!result.ok && 'errors' in result) {
       expect(result.errors).toContainEqual({
         field: 'amount',
         reason: 'spentTotal (100) + amount (450) exceeds maxTotalBudget (500)',

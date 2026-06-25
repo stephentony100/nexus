@@ -35,3 +35,4 @@ export type ValidationResult =
 export type TranslateActionResult =
   | { ok: true; action: PolicyAction; ptbBytes: string }
   | { ok: false; errors: FieldError[] }
+  | { ok: false; status: 'config_missing'; reason: string }

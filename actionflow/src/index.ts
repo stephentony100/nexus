@@ -4,13 +4,14 @@ import { extractActionGoal, ExtractionRefusedError } from './extractor.js'
 import type { RawActionGoal } from './extractor.js'
 import { fetchPolicyState } from './policyState.js'
 import { validateAction } from './validator.js'
-import { buildRecordActionPtb } from './ptbBuilder.js'
-import type { TranslateActionResult } from './types.js'
+import { buildActionPtb } from './ptbBuilder.js'
+import type { ScallopConfig, TranslateActionResult } from './types.js'
 
 export interface TranslateActionOptions {
   policyId: string
   packageId: string
   walrusBlobId: string
+  scallop?: ScallopConfig
   client?: Anthropic
   suiClient?: SuiJsonRpcClient
 }
@@ -39,8 +40,12 @@ export async function translateAction(
     return validated
   }
 
-  const tx = buildRecordActionPtb(validated.action, opts.walrusBlobId, opts.packageId)
-  const bytes = await tx.build({ onlyTransactionKind: true, client: suiClient })
+  const built = buildActionPtb(validated.action, opts.walrusBlobId, opts.packageId, opts.scallop)
+  if (!built.ok) {
+    return built
+  }
+
+  const bytes = await built.tx.build({ onlyTransactionKind: true, client: suiClient })
   const ptbBytes = Buffer.from(bytes).toString('base64')
 
   return { ok: true, action: validated.action, ptbBytes }
@@ -49,6 +54,14 @@ export async function translateAction(
 export { extractActionGoal, ExtractionRefusedError } from './extractor.js'
 export { fetchPolicyState, PolicyFetchError } from './policyState.js'
 export { validateAction } from './validator.js'
-export { buildRecordActionPtb } from './ptbBuilder.js'
+export { buildRecordActionPtb, buildScallopSupplySuiPtb, buildActionPtb } from './ptbBuilder.js'
+export type { BuildActionPtbResult } from './ptbBuilder.js'
 export type { RawActionGoal } from './extractor.js'
-export type { PolicyState, PolicyAction, FieldError, ValidationResult, TranslateActionResult } from './types.js'
+export type {
+  PolicyState,
+  PolicyAction,
+  ScallopConfig,
+  FieldError,
+  ValidationResult,
+  TranslateActionResult,
+} from './types.js'
