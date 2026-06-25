@@ -36,7 +36,7 @@ function validState(overrides: Partial<PolicyState> = {}): PolicyState {
 
 describe('translateAction', () => {
   it('returns action and ptbBytes on a full happy path', async () => {
-    vi.mocked(extractActionGoal).mockResolvedValue({ protocol: 'scallop', amount: 50 })
+    vi.mocked(extractActionGoal).mockResolvedValue({ protocol: 'scallop', amount: 50, action: 'supply' })
     vi.mocked(fetchPolicyState).mockResolvedValue(validState())
 
     // A real SuiJsonRpcClient is used (rather than a bare {} stub) because
@@ -93,7 +93,7 @@ describe('translateAction', () => {
   })
 
   it('returns validation errors without building a PTB when budget is exceeded', async () => {
-    vi.mocked(extractActionGoal).mockResolvedValue({ protocol: 'scallop', amount: 450 })
+    vi.mocked(extractActionGoal).mockResolvedValue({ protocol: 'scallop', amount: 450, action: 'supply' })
     vi.mocked(fetchPolicyState).mockResolvedValue(validState({ spentTotal: 100, maxTotalBudget: 500, maxSingleTx: 500 }))
 
     const result = await translateAction('deposit 450 into scallop', {
@@ -114,7 +114,7 @@ describe('translateAction', () => {
   })
 
   it('propagates a state-fetch failure as a thrown error', async () => {
-    vi.mocked(extractActionGoal).mockResolvedValue({ protocol: 'scallop', amount: 50 })
+    vi.mocked(extractActionGoal).mockResolvedValue({ protocol: 'scallop', amount: 50, action: 'supply' })
     vi.mocked(fetchPolicyState).mockRejectedValue(new Error('object not found'))
 
     await expect(

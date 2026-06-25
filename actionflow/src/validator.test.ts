@@ -10,6 +10,7 @@ function validRaw(overrides: Partial<RawActionGoal> = {}): RawActionGoal {
   return {
     protocol: 'scallop',
     amount: 100,
+    action: 'supply',
     ...overrides,
   }
 }
@@ -33,7 +34,7 @@ describe('validateAction', () => {
     const result = validateAction(validRaw(), validState(), NOW, POLICY_ID)
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.action).toEqual({ policyId: POLICY_ID, protocol: 'scallop', amount: 100 })
+      expect(result.action).toEqual({ policyId: POLICY_ID, protocol: 'scallop', amount: 100, action: 'supply' })
     }
   })
 

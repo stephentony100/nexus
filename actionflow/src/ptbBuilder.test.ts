@@ -6,6 +6,7 @@ const ACTION: PolicyAction = {
   policyId: '0x' + 'aa'.repeat(32),
   protocol: 'scallop',
   amount: 100,
+  action: 'supply',
 }
 
 const WALRUS_BLOB_ID = 'placeholder-blob-id'

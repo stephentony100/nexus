@@ -53,6 +53,6 @@ export function validateAction(
     return { ok: false, errors }
   }
 
-  const action: PolicyAction = { policyId, protocol, amount }
+  const action: PolicyAction = { policyId, protocol, amount, action: raw.action as 'supply' | 'withdraw' }
   return { ok: true, action }
 }
