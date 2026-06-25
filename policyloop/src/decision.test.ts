@@ -34,7 +34,7 @@ describe('decidePolicyAction', () => {
 
   it('does not treat nowMs equal to expiresAtMs as expired', () => {
     const state = baseState({ expiresAtMs: 1000, maxTotalBudget: 100, spentTotal: 0, maxSingleTx: 50 })
-    expect(decidePolicyAction(state, 1000)).toEqual({ kind: 'propose', protocol: 'scallop', amount: 50 })
+    expect(decidePolicyAction(state, 1000)).toEqual({ kind: 'propose', protocol: 'scallop', amount: 50, action: 'supply' })
   })
 
   it('skips when budget is exhausted', () => {
@@ -49,12 +49,12 @@ describe('decidePolicyAction', () => {
 
   it('proposes the first allowed protocol capped at maxSingleTx', () => {
     const state = baseState({ maxTotalBudget: 1000, spentTotal: 0, maxSingleTx: 100, allowedProtocols: ['scallop', 'navi'] })
-    expect(decidePolicyAction(state, 1000)).toEqual({ kind: 'propose', protocol: 'scallop', amount: 100 })
+    expect(decidePolicyAction(state, 1000)).toEqual({ kind: 'propose', protocol: 'scallop', amount: 100, action: 'supply' })
   })
 
   it('caps the proposed amount at the remaining budget when it is smaller than maxSingleTx', () => {
     const state = baseState({ maxTotalBudget: 1000, spentTotal: 970, maxSingleTx: 100 })
-    expect(decidePolicyAction(state, 1000)).toEqual({ kind: 'propose', protocol: 'scallop', amount: 30 })
+    expect(decidePolicyAction(state, 1000)).toEqual({ kind: 'propose', protocol: 'scallop', amount: 30, action: 'supply' })
   })
 
   it('checks paused before revoked, expiry, and budget', () => {
