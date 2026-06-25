@@ -15,6 +15,9 @@ export function validateAction(
   if (raw.amount === null) {
     errors.push({ field: 'amount', reason: 'not specified in goal' })
   }
+  if (raw.action === null) {
+    errors.push({ field: 'action', reason: 'not specified in goal' })
+  }
 
   if (errors.length > 0) {
     return { ok: false, errors }
@@ -22,6 +25,7 @@ export function validateAction(
 
   const protocol = raw.protocol as string
   const amount = raw.amount as number
+  const action = raw.action as 'supply' | 'withdraw'
 
   if (state.paused) {
     errors.push({ field: '_root', reason: 'policy is paused' })
@@ -38,6 +42,9 @@ export function validateAction(
       reason: `"${protocol}" is not in allowed protocols (${state.allowedProtocols.join(', ')})`,
     })
   }
+  if (protocol === 'scallop' && action !== 'supply') {
+    errors.push({ field: 'action', reason: `scallop ${action} is not supported on-chain yet` })
+  }
   if (amount <= 0) {
     errors.push({ field: 'amount', reason: `must be greater than 0, got ${amount}` })
   } else if (amount > state.maxSingleTx) {
@@ -53,6 +60,6 @@ export function validateAction(
     return { ok: false, errors }
   }
 
-  const action: PolicyAction = { policyId, protocol, amount }
-  return { ok: true, action }
+  const validatedAction: PolicyAction = { policyId, protocol, amount, action }
+  return { ok: true, action: validatedAction }
 }

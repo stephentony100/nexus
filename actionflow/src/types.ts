@@ -13,6 +13,14 @@ export interface PolicyAction {
   policyId: string
   protocol: string
   amount: number
+  action: 'supply' | 'withdraw'
+}
+
+export interface ScallopConfig {
+  versionObjectId: string
+  marketObjectId: string
+  versionInitialSharedVersion?: string | number
+  marketInitialSharedVersion?: string | number
 }
 
 export interface FieldError {
@@ -27,3 +35,4 @@ export type ValidationResult =
 export type TranslateActionResult =
   | { ok: true; action: PolicyAction; ptbBytes: string }
   | { ok: false; errors: FieldError[] }
+  | { ok: false; status: 'config_missing'; reason: string }

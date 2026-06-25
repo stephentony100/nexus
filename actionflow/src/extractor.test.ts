@@ -14,24 +14,36 @@ describe('extractActionGoal', () => {
   it('returns the parsed action goal on success', async () => {
     const client = mockClient({
       stop_reason: 'end_turn',
-      parsed_output: { protocol: 'scallop', amount: 100 },
+      parsed_output: { protocol: 'scallop', amount: 100, action: 'supply' },
     })
 
     const result = await extractActionGoal('deposit $100 into scallop', client)
 
-    expect(result).toEqual({ protocol: 'scallop', amount: 100 })
+    expect(result).toEqual({ protocol: 'scallop', amount: 100, action: 'supply' })
   })
 
   it('returns all-null fields when the goal has nothing to extract', async () => {
     const client = mockClient({
       stop_reason: 'end_turn',
-      parsed_output: { protocol: null, amount: null },
+      parsed_output: { protocol: null, amount: null, action: null },
     })
 
     const result = await extractActionGoal('what is the weather today?', client)
 
     expect(result.protocol).toBeNull()
     expect(result.amount).toBeNull()
+    expect(result.action).toBeNull()
+  })
+
+  it('returns a null action when the goal states protocol and amount but no direction', async () => {
+    const client = mockClient({
+      stop_reason: 'end_turn',
+      parsed_output: { protocol: 'scallop', amount: 100, action: null },
+    })
+
+    const result = await extractActionGoal('do something with $100 in scallop', client)
+
+    expect(result.action).toBeNull()
   })
 
   it('throws ExtractionRefusedError on a refusal', async () => {

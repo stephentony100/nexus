@@ -10,6 +10,7 @@ function validRaw(overrides: Partial<RawActionGoal> = {}): RawActionGoal {
   return {
     protocol: 'scallop',
     amount: 100,
+    action: 'supply',
     ...overrides,
   }
 }
@@ -33,7 +34,7 @@ describe('validateAction', () => {
     const result = validateAction(validRaw(), validState(), NOW, POLICY_ID)
     expect(result.ok).toBe(true)
     if (result.ok) {
-      expect(result.action).toEqual({ policyId: POLICY_ID, protocol: 'scallop', amount: 100 })
+      expect(result.action).toEqual({ policyId: POLICY_ID, protocol: 'scallop', amount: 100, action: 'supply' })
     }
   })
 
@@ -137,5 +138,34 @@ describe('validateAction', () => {
       expect(result.errors).toHaveLength(2)
       expect(result.errors.map((e) => e.field).sort()).toEqual(['amount', 'protocol'])
     }
+  })
+
+  it('rejects a null action', () => {
+    const result = validateAction(validRaw({ action: null }), validState(), NOW, POLICY_ID)
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.errors).toContainEqual({ field: 'action', reason: 'not specified in goal' })
+    }
+  })
+
+  it('rejects a scallop withdraw as not yet supported on-chain', () => {
+    const result = validateAction(validRaw({ action: 'withdraw' }), validState(), NOW, POLICY_ID)
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.errors).toContainEqual({
+        field: 'action',
+        reason: 'scallop withdraw is not supported on-chain yet',
+      })
+    }
+  })
+
+  it('accepts a withdraw action for a non-scallop protocol', () => {
+    const result = validateAction(
+      validRaw({ protocol: 'deepbook', action: 'withdraw' }),
+      validState({ allowedProtocols: ['deepbook'] }),
+      NOW,
+      POLICY_ID,
+    )
+    expect(result.ok).toBe(true)
   })
 })

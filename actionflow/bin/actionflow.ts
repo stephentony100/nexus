@@ -29,9 +29,13 @@ async function main() {
   const result = await translateAction(goal, { policyId, packageId, walrusBlobId })
 
   if (!result.ok) {
-    console.error('Could not build an action from this goal:')
-    for (const error of result.errors) {
-      console.error(`  - ${error.field}: ${error.reason}`)
+    if ('errors' in result) {
+      console.error('Could not build an action from this goal:')
+      for (const error of result.errors) {
+        console.error(`  - ${error.field}: ${error.reason}`)
+      }
+    } else {
+      console.error(`Could not build an action from this goal: ${result.reason}`)
     }
     process.exit(1)
   }

@@ -1,6 +1,20 @@
 #!/usr/bin/env node
 import { runAction } from '../src/index.js'
 
+function readScallopConfig() {
+  const versionObjectId = process.env.SCALLOP_VERSION_OBJECT_ID
+  const marketObjectId = process.env.SCALLOP_MARKET_OBJECT_ID
+  if (!versionObjectId || !marketObjectId) {
+    return undefined
+  }
+  return {
+    versionObjectId,
+    marketObjectId,
+    versionInitialSharedVersion: process.env.SCALLOP_VERSION_INITIAL_SHARED_VERSION,
+    marketInitialSharedVersion: process.env.SCALLOP_MARKET_INITIAL_SHARED_VERSION,
+  }
+}
+
 async function main() {
   const goal = process.argv.slice(2).join(' ')
   if (!goal) {
@@ -31,11 +45,11 @@ async function main() {
     process.exit(1)
   }
 
-  const result = await runAction(goal, { policyId, packageId, walrusBlobId })
+  const result = await runAction(goal, { policyId, packageId, walrusBlobId, scallop: readScallopConfig() })
 
   switch (result.status) {
     case 'succeeded':
-      console.log('Action recorded on-chain:')
+      console.log(result.eventKind === 'scallop_sui_supplied' ? 'Scallop SUI supply recorded on-chain:' : 'Action recorded on-chain:')
       console.log(JSON.stringify(result.event, null, 2))
       console.log(`\nDigest: ${result.digest}`)
       return
@@ -44,6 +58,10 @@ async function main() {
       for (const error of result.errors) {
         console.error(`  - ${error.field}: ${error.reason}`)
       }
+      process.exit(1)
+      return
+    case 'config_missing':
+      console.error(`Missing configuration: ${result.reason}`)
       process.exit(1)
       return
     case 'simulation_failed':
@@ -55,7 +73,7 @@ async function main() {
       process.exit(1)
       return
     case 'event_missing':
-      console.error(`Execution reported success (digest ${result.digest}) but no ActionRecorded event was found`)
+      console.error(`Execution reported success (digest ${result.digest}) but no recognized event was found`)
       process.exit(1)
       return
     case 'submission_failed':
