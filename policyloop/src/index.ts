@@ -1,6 +1,7 @@
 import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc'
 import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
-import { fetchPolicyState, validateAction, buildRecordActionPtb } from 'actionflow'
+import { fetchPolicyState, validateAction, buildActionPtb } from 'actionflow'
+import type { ScallopConfig } from 'actionflow'
 import { loadAgentKeypair, submitTransaction } from 'agentrunner'
 import type { RunActionResult } from 'agentrunner'
 import { decidePolicyAction } from './decision.js'
@@ -9,6 +10,7 @@ export interface PolicyLoopOptions {
   policyId: string
   packageId: string
   walrusBlobId: string
+  scallop?: ScallopConfig
   suiClient?: SuiJsonRpcClient
   signer?: Ed25519Keypair
 }
@@ -30,7 +32,7 @@ export async function runPolicyCycle(opts: PolicyLoopOptions): Promise<PolicyLoo
   }
 
   const validated = validateAction(
-    { protocol: decision.protocol, amount: decision.amount },
+    { protocol: decision.protocol, amount: decision.amount, action: decision.action },
     state,
     nowMs,
     opts.policyId,
@@ -39,11 +41,15 @@ export async function runPolicyCycle(opts: PolicyLoopOptions): Promise<PolicyLoo
     return { ok: false, status: 'validation_failed', errors: validated.errors }
   }
 
-  const tx = buildRecordActionPtb(validated.action, opts.walrusBlobId, opts.packageId)
-  const signer = opts.signer ?? loadAgentKeypair()
-  tx.setSender(signer.toSuiAddress())
+  const built = buildActionPtb(validated.action, opts.walrusBlobId, opts.packageId, opts.scallop)
+  if (!built.ok) {
+    return built
+  }
 
-  return submitTransaction(tx, signer, suiClient)
+  const signer = opts.signer ?? loadAgentKeypair()
+  built.tx.setSender(signer.toSuiAddress())
+
+  return submitTransaction(built.tx, signer, suiClient)
 }
 
 export { decidePolicyAction } from './decision.js'

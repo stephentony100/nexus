@@ -6,7 +6,7 @@ import type { PolicyState } from 'actionflow'
 vi.mock('actionflow', () => ({
   fetchPolicyState: vi.fn(),
   validateAction: vi.fn(),
-  buildRecordActionPtb: vi.fn(),
+  buildActionPtb: vi.fn(),
 }))
 
 vi.mock('agentrunner', () => ({
@@ -14,7 +14,7 @@ vi.mock('agentrunner', () => ({
   submitTransaction: vi.fn(),
 }))
 
-import { fetchPolicyState, validateAction, buildRecordActionPtb } from 'actionflow'
+import { fetchPolicyState, validateAction, buildActionPtb } from 'actionflow'
 import { submitTransaction } from 'agentrunner'
 import { runPolicyCycle } from './index.js'
 
@@ -49,7 +49,7 @@ describe('runPolicyCycle', () => {
 
     expect(result).toEqual({ ok: true, status: 'skipped', reason: 'policy is paused' })
     expect(validateAction).not.toHaveBeenCalled()
-    expect(buildRecordActionPtb).not.toHaveBeenCalled()
+    expect(buildActionPtb).not.toHaveBeenCalled()
     expect(submitTransaction).not.toHaveBeenCalled()
   })
 
@@ -73,7 +73,31 @@ describe('runPolicyCycle', () => {
       status: 'validation_failed',
       errors: [{ field: 'amount', reason: 'amount (100) exceeds maxSingleTx (50)' }],
     })
-    expect(buildRecordActionPtb).not.toHaveBeenCalled()
+    expect(buildActionPtb).not.toHaveBeenCalled()
+    expect(submitTransaction).not.toHaveBeenCalled()
+  })
+
+  it('returns config_missing when buildActionPtb cannot route the action', async () => {
+    vi.mocked(fetchPolicyState).mockResolvedValue(basePolicyState())
+    vi.mocked(validateAction).mockReturnValue({
+      ok: true,
+      action: { policyId: POLICY_ID, protocol: 'scallop', amount: 100, action: 'supply' },
+    })
+    vi.mocked(buildActionPtb).mockReturnValue({
+      ok: false,
+      status: 'config_missing',
+      reason: 'scallop config required for scallop supply',
+    })
+    const signer = Ed25519Keypair.generate()
+
+    const result = await runPolicyCycle({
+      policyId: POLICY_ID,
+      packageId: PACKAGE_ID,
+      walrusBlobId: 'blob',
+      signer,
+    })
+
+    expect(result).toEqual({ ok: false, status: 'config_missing', reason: 'scallop config required for scallop supply' })
     expect(submitTransaction).not.toHaveBeenCalled()
   })
 
@@ -82,13 +106,14 @@ describe('runPolicyCycle', () => {
     vi.mocked(fetchPolicyState).mockResolvedValue(basePolicyState())
     vi.mocked(validateAction).mockReturnValue({
       ok: true,
-      action: { policyId: POLICY_ID, protocol: 'scallop', amount: 100 },
+      action: { policyId: POLICY_ID, protocol: 'scallop', amount: 100, action: 'supply' },
     })
-    vi.mocked(buildRecordActionPtb).mockReturnValue(new Transaction())
+    vi.mocked(buildActionPtb).mockReturnValue({ ok: true, tx: new Transaction() })
     vi.mocked(submitTransaction).mockResolvedValue({
       ok: true,
       status: 'succeeded',
       digest: 'digest1',
+      eventKind: 'action_recorded',
       event: {
         policyId: POLICY_ID,
         agent: signer.toSuiAddress(),
@@ -108,10 +133,11 @@ describe('runPolicyCycle', () => {
     })
 
     expect(result.ok).toBe(true)
-    expect(buildRecordActionPtb).toHaveBeenCalledWith(
-      { policyId: POLICY_ID, protocol: 'scallop', amount: 100 },
+    expect(buildActionPtb).toHaveBeenCalledWith(
+      { policyId: POLICY_ID, protocol: 'scallop', amount: 100, action: 'supply' },
       'blob',
       PACKAGE_ID,
+      undefined,
     )
     expect(submitTransaction).toHaveBeenCalledTimes(1)
     const [calledTx, calledSigner] = vi.mocked(submitTransaction).mock.calls[0]
