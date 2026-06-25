@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import { Transaction } from '@mysten/sui/transactions'
 
@@ -18,6 +18,10 @@ const POLICY_ID = '0x' + 'aa'.repeat(32)
 const PACKAGE_ID = '0x' + '11'.repeat(32)
 
 describe('runAction', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('returns validation_failed without ever calling submitTransaction', async () => {
     vi.mocked(translateAction).mockResolvedValue({
       ok: false,
@@ -46,13 +50,14 @@ describe('runAction', () => {
 
     vi.mocked(translateAction).mockResolvedValue({
       ok: true,
-      action: { policyId: POLICY_ID, protocol: 'scallop', amount: 50 },
+      action: { policyId: POLICY_ID, protocol: 'scallop', amount: 50, action: 'supply' },
       ptbBytes: base64Bytes,
     })
     vi.mocked(submitTransaction).mockResolvedValue({
       ok: true,
       status: 'succeeded',
       digest: 'digest1',
+      eventKind: 'action_recorded',
       event: {
         policyId: POLICY_ID,
         agent: signer.toSuiAddress(),
@@ -76,5 +81,30 @@ describe('runAction', () => {
     const [calledTx, calledSigner] = vi.mocked(submitTransaction).mock.calls[0]
     expect(calledSigner).toBe(signer)
     expect(calledTx.getData().sender).toBe(signer.toSuiAddress())
+  })
+
+  it('passes the scallop config through to translateAction', async () => {
+    const signer = Ed25519Keypair.generate()
+    vi.mocked(translateAction).mockResolvedValue({
+      ok: false,
+      status: 'config_missing',
+      reason: 'scallop config required for scallop supply',
+    })
+
+    const scallop = { versionObjectId: '0xver', marketObjectId: '0xmkt' }
+    const result = await runAction('deposit 50 into scallop', {
+      policyId: POLICY_ID,
+      packageId: PACKAGE_ID,
+      walrusBlobId: 'blob',
+      scallop,
+      signer,
+    })
+
+    expect(result).toEqual({ ok: false, status: 'config_missing', reason: 'scallop config required for scallop supply' })
+    expect(translateAction).toHaveBeenCalledWith(
+      'deposit 50 into scallop',
+      expect.objectContaining({ scallop }),
+    )
+    expect(submitTransaction).not.toHaveBeenCalled()
   })
 })

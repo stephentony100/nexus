@@ -13,12 +13,16 @@ export async function runAction(goal: string, opts: RunActionOptions): Promise<R
     policyId: opts.policyId,
     packageId: opts.packageId,
     walrusBlobId: opts.walrusBlobId,
+    scallop: opts.scallop,
     client: opts.client,
     suiClient,
   }
 
   const translated = await translateAction(goal, translateOpts)
   if (!translated.ok) {
+    if ('status' in translated) {
+      return translated
+    }
     return { ok: false, status: 'validation_failed', errors: translated.errors }
   }
 
@@ -31,4 +35,4 @@ export async function runAction(goal: string, opts: RunActionOptions): Promise<R
 
 export { loadAgentKeypair } from './signer.js'
 export { submitTransaction } from './submitter.js'
-export type { ActionRecordedEvent, RunActionOptions, RunActionResult } from './types.js'
+export type { ActionRecordedEvent, RunActionOptions, RunActionResult, ScallopSuiSuppliedEvent } from './types.js'
