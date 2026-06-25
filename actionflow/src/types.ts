@@ -13,6 +13,7 @@ export interface PolicyAction {
   policyId: string
   protocol: string
   amount: number
+  action: 'supply' | 'withdraw'
 }
 
 export interface FieldError {

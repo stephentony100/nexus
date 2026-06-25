@@ -5,6 +5,7 @@ import { z } from 'zod'
 export const RawActionGoalSchema = z.object({
   protocol: z.string().nullable(),
   amount: z.number().nullable(),
+  action: z.enum(['supply', 'withdraw']).nullable(),
 })
 
 export type RawActionGoal = z.infer<typeof RawActionGoalSchema>
@@ -21,6 +22,7 @@ const SYSTEM_PROMPT = `You translate a user's plain-English request to take a De
 Extract exactly these fields from the user's goal text:
 - protocol: the lowercase name of the protocol to act on (e.g. "scallop", "deepbook"), ONLY if the user explicitly named one. Never invent or guess a protocol.
 - amount: the amount of the action, as a plain number (no currency symbols).
+- action: "supply" if the user wants to deposit, add, or supply funds into the protocol; "withdraw" if the user wants to withdraw, redeem, or pull funds out. ONLY if the user's intent is clearly one of these two.
 
 If the user did not state a field, return null for it. Do not guess, default, or infer values that are not present in the text.`
 
