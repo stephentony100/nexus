@@ -88,8 +88,12 @@ export async function runDaemon(
 ```
 emit daemon_started { intervalMs, maxErrorDelayMs, policyId }
 
+// daemon_stopping is emitted immediately on abort via a one-time abort listener
+// registered before the loop starts, so it fires even if the abort happens mid-sleep
+signal.addEventListener('abort', () => emit daemon_stopping, { once: true })
+
 while not signal.aborted:
-  cycleId = randomShortId()        // e.g. 8 hex chars from crypto.randomUUID()
+  cycleId = randomShortId()        // 8 hex chars from crypto.randomUUID()
   emit cycle_started { cycleId }
   start = Date.now()
 
@@ -98,23 +102,34 @@ while not signal.aborted:
     durationMs = Date.now() - start
 
     if result.status === 'succeeded':
-      emit cycle_completed { cycleId, durationMs, status, protocol, amountMist, digest, eventKind }
+      emit cycle_completed { level: 'info', cycleId, durationMs, status, protocol, amountMist, digest, eventKind, reasoning? }
+      // reasoning and marketContextPresent included only if present on result
     else if result.status === 'skipped':
-      emit cycle_skipped { cycleId, durationMs, reason, errorType? }
+      emit cycle_skipped { level: 'info', cycleId, durationMs, reason, errorType? }
     else:
-      emit cycle_completed { cycleId, durationMs, status, errors? }   // validation_failed etc.
+      emit cycle_completed { level: 'warn', cycleId, durationMs, status, errors? }   // validation_failed etc.
 
     await interruptibleSleep(intervalMs, signal)
 
   catch err:
     durationMs = Date.now() - start
     backoffMs = Math.min(intervalMs * 2, maxErrorDelayMs)
-    emit cycle_failed { cycleId, durationMs, error: err.message, backoffMs, level: 'error' }
+    emit cycle_failed { level: 'error', cycleId, durationMs, error: serializeError(err), backoffMs }
     await interruptibleSleep(backoffMs, signal)
 
-emit daemon_stopping { level: 'info' }
-emit daemon_stopped  { level: 'info' }
+emit daemon_stopped { level: 'info' }
 ```
+
+**`serializeError` helper (internal):**
+```ts
+function serializeError(err: unknown): { message: string; name?: string; stack?: string } {
+  return err instanceof Error
+    ? { message: err.message, name: err.name, stack: err.stack }
+    : { message: String(err) }
+}
+```
+
+**`reasoning` field:** Only included in `cycle_completed` if it is present on the `runPolicyCycle` result. The daemon does not reconstruct or infer it.
 
 **Backoff:** flat formula, no streak counter. Backoff only on unexpected throws — handled `PolicyLoopResult` values (including `skipped`) always use the normal interval.
 
@@ -130,7 +145,7 @@ emit daemon_stopped  { level: 'info' }
 | `daemon_stopping` | info | — |
 | `daemon_stopped` | info | — |
 
-For AI-driven cycles that succeed, include `reasoning` and `marketContextPresent: boolean` in `cycle_completed`.
+For AI-driven cycles that succeed, `reasoning` and `marketContextPresent: boolean` are included in `cycle_completed` only if present on the result — the daemon does not reconstruct them.
 
 ### `interruptibleSleep` (internal)
 
@@ -151,7 +166,8 @@ Not exported. Resolves when the timeout fires or the signal is aborted — which
    process.on('SIGTERM', () => controller.abort())
 6. const onLog = (record) => process.stdout.write(JSON.stringify(record) + '\n')
 7. await runDaemon(policyOpts, config, controller.signal, onLog)
-8. process.exit(0)
+   // Node exits naturally after runDaemon resolves — no process.exit(0) needed
+   // process.exit(1) is only used for startup validation failures (steps 1–2)
 ```
 
 All daemon lifecycle logs (`daemon_started`, `daemon_stopping`, `daemon_stopped`) are emitted inside `runDaemon` — `bin/daemon.ts` does not emit any log records itself.
@@ -193,7 +209,7 @@ Mocks `./index.js` (runPolicyCycle) via `vi.mock`. Captures log records via `onL
 
 5. **Abort during sleep** — after the first cycle completes and the interruptible sleep begins, call `controller.abort()` while fake timers have not yet advanced (so the sleep would not naturally resolve). Assert: no second `cycle_started` emitted, `daemon_stopping` + `daemon_stopped` emitted, loop exits promptly.
 
-6. **Config validation** — `readDaemonConfig` with `POLICYLOOP_INTERVAL_MS=0` throws; with `POLICYLOOP_MAX_ERROR_DELAY_MS` less than `intervalMs` throws.
+6. **Config validation** — `readDaemonConfig` throws for: `POLICYLOOP_INTERVAL_MS=0`; `POLICYLOOP_MAX_ERROR_DELAY_MS` less than `intervalMs`; `POLICYLOOP_INTERVAL_MS=abc` (non-numeric → `NaN`); `POLICYLOOP_MAX_ERROR_DELAY_MS=abc` (non-numeric → `NaN`).
 
 **`cycleId` invariant:** In every test that runs a cycle, assert all log records emitted during that cycle carry the same `cycleId`.
 
