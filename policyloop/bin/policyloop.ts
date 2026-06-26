@@ -1,33 +1,6 @@
 #!/usr/bin/env node
-import Anthropic from '@anthropic-ai/sdk'
+import { readScallopConfig, readAiConfig } from '../src/config.js'
 import { runPolicyCycle } from '../src/index.js'
-
-function readScallopConfig() {
-  const versionObjectId = process.env.SCALLOP_VERSION_OBJECT_ID
-  const marketObjectId = process.env.SCALLOP_MARKET_OBJECT_ID
-  if (!versionObjectId || !marketObjectId) {
-    return undefined
-  }
-  return {
-    versionObjectId,
-    marketObjectId,
-    versionInitialSharedVersion: process.env.SCALLOP_VERSION_INITIAL_SHARED_VERSION,
-    marketInitialSharedVersion: process.env.SCALLOP_MARKET_INITIAL_SHARED_VERSION,
-  }
-}
-
-function readAiConfig() {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) {
-    console.warn('ANTHROPIC_API_KEY not set — running in legacy (deterministic) mode')
-    return undefined
-  }
-  return {
-    client: new Anthropic({ apiKey }),
-    marketContext: process.env.POLICYLOOP_MARKET_CONTEXT,
-    throwOnAiFailure: process.env.POLICYLOOP_THROW_ON_AI_FAILURE === 'true',
-  }
-}
 
 async function main() {
   const policyId = process.env.ACTIONFLOW_POLICY_ID
