@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import Anthropic from '@anthropic-ai/sdk'
 import { runPolicyCycle } from '../src/index.js'
 
 function readScallopConfig() {
@@ -12,6 +13,19 @@ function readScallopConfig() {
     marketObjectId,
     versionInitialSharedVersion: process.env.SCALLOP_VERSION_INITIAL_SHARED_VERSION,
     marketInitialSharedVersion: process.env.SCALLOP_MARKET_INITIAL_SHARED_VERSION,
+  }
+}
+
+function readAiConfig() {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) {
+    console.warn('ANTHROPIC_API_KEY not set — running in legacy (deterministic) mode')
+    return undefined
+  }
+  return {
+    client: new Anthropic({ apiKey }),
+    marketContext: process.env.POLICYLOOP_MARKET_CONTEXT,
+    throwOnAiFailure: process.env.POLICYLOOP_THROW_ON_AI_FAILURE === 'true',
   }
 }
 
@@ -39,7 +53,13 @@ async function main() {
     process.exit(1)
   }
 
-  const result = await runPolicyCycle({ policyId, packageId, walrusBlobId, scallop: readScallopConfig() })
+  const result = await runPolicyCycle({
+    policyId,
+    packageId,
+    walrusBlobId,
+    scallop: readScallopConfig(),
+    ai: readAiConfig(),
+  })
 
   switch (result.status) {
     case 'skipped':
