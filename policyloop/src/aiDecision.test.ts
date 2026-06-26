@@ -80,4 +80,23 @@ describe('consultDecisionAI', () => {
       'network connection failed',
     )
   })
+
+  it('passes the correct model, output_config, and policy state to the Claude API', async () => {
+    const client = makeClient({ kind: 'skip', reason: 'no opportunities' })
+    const state = basePolicyState({ allowedProtocols: ['scallop', 'navi'], maxSingleTx: 200 })
+    await consultDecisionAI(state, client)
+    const callArgs = vi.mocked(client.messages.parse).mock.calls[0][0]
+    expect(callArgs.model).toBe('claude-haiku-4-5-20251001')
+    expect(callArgs.output_config).toBeDefined()
+    expect(callArgs.output_config!.format).toBeDefined()
+    expect(callArgs.system).toContain('scallop, navi')
+    expect(callArgs.system).toContain('200')
+  })
+
+  it('includes marketContext in the system prompt when provided', async () => {
+    const client = makeClient({ kind: 'skip', reason: 'low yield' })
+    await consultDecisionAI(basePolicyState(), client, { marketContext: 'scallop APY: 8.5%' })
+    const callArgs = vi.mocked(client.messages.parse).mock.calls[0][0]
+    expect(callArgs.system).toContain('scallop APY: 8.5%')
+  })
 })
