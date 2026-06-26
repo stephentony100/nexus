@@ -13,7 +13,9 @@
   "dependencies": {
     "actionflow": "file:../actionflow",
     "agentrunner": "file:../agentrunner",
-    "@mysten/sui": "^2.18.0"
+    "@anthropic-ai/sdk": "^0.104.2",
+    "@mysten/sui": "^2.18.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
