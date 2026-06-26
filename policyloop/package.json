@@ -8,7 +8,8 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
-    "cli": "tsx bin/policyloop.ts"
+    "cli": "tsx bin/policyloop.ts",
+    "daemon": "tsx bin/daemon.ts"
   },
   "dependencies": {
     "actionflow": "file:../actionflow",

@@ -44,7 +44,7 @@ export async function runDaemon(
   const { intervalMs, maxErrorDelayMs } = config
 
   const log = (fields: Omit<LogRecord, 'ts'>) => {
-    onLog({ ts: new Date().toISOString(), ...fields })
+    onLog({ ts: new Date().toISOString(), ...fields } as LogRecord)
   }
 
   log({ level: 'info', event: 'daemon_started', intervalMs, maxErrorDelayMs, policyId: policyOpts.policyId })
