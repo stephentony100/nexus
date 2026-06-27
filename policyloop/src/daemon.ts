@@ -22,6 +22,7 @@ function serializeError(err: unknown): { message: string; name?: string; stack?:
 }
 
 function interruptibleSleep(ms: number, signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return Promise.resolve()
   return new Promise<void>((resolve) => {
     const timeout = setTimeout(resolve, ms)
     signal.addEventListener(
@@ -69,8 +70,7 @@ export async function runDaemon(
       if (result.status === 'skipped') {
         log({ level: 'info', event: 'cycle_skipped', cycleId, durationMs, reason: result.reason })
       } else if (result.status === 'succeeded') {
-        const extraFields =
-          result.eventKind === 'action_recorded' ? { protocol: result.event.protocolId } : {}
+        const isActionRecorded = result.eventKind === 'action_recorded'
         log({
           level: 'info',
           event: 'cycle_completed',
@@ -79,8 +79,9 @@ export async function runDaemon(
           status: result.status,
           digest: result.digest,
           eventKind: result.eventKind,
-          amountMist: Number(result.event.amount),
-          ...extraFields,
+          ...(isActionRecorded
+            ? { amountMist: Number(result.event.amount), protocol: result.event.protocolId }
+            : {}),
         })
       } else {
         const extraFields =

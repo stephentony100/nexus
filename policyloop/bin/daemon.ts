@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readAiConfig, readDaemonConfig } from '../src/config.js'
+import { readScallopConfig, readAiConfig, readDaemonConfig } from '../src/config.js'
 import { runDaemon } from '../src/daemon.js'
 import type { LogRecord } from '../src/daemon.js'
 import type { PolicyLoopOptions } from '../src/index.js'
@@ -31,6 +31,7 @@ async function main() {
     policyId,
     packageId,
     walrusBlobId,
+    scallop: readScallopConfig(),
     ai: readAiConfig(),
   }
 
