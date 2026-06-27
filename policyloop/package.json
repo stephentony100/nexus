@@ -12,10 +12,11 @@
     "daemon": "tsx bin/daemon.ts"
   },
   "dependencies": {
-    "actionflow": "file:../actionflow",
-    "agentrunner": "file:../agentrunner",
     "@anthropic-ai/sdk": "^0.104.2",
     "@mysten/sui": "^2.18.0",
+    "@mysten/walrus": "^1.2.3",
+    "actionflow": "file:../actionflow",
+    "agentrunner": "file:../agentrunner",
     "zod": "^4.4.3"
   },
   "devDependencies": {
