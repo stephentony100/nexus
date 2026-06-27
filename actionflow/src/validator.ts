@@ -45,6 +45,12 @@ export function validateAction(
   if (protocol === 'scallop' && action !== 'supply') {
     errors.push({ field: 'action', reason: `scallop ${action} is not supported on-chain yet` })
   }
+  if (protocol === 'deepbook' && action === 'supply') {
+    errors.push({
+      field: 'action',
+      reason: "deepbook does not support 'supply'; use 'swap' or 'place_limit_order'",
+    })
+  }
   if (amount <= 0) {
     errors.push({ field: 'amount', reason: `must be greater than 0, got ${amount}` })
   } else if (amount > state.maxSingleTx) {

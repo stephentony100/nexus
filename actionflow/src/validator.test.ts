@@ -159,6 +159,22 @@ describe('validateAction', () => {
     }
   })
 
+  it('rejects deepbook + supply as an invalid action for this protocol', () => {
+    const result = validateAction(
+      validRaw({ protocol: 'deepbook', action: 'supply' }),
+      validState({ allowedProtocols: ['deepbook'] }),
+      NOW,
+      POLICY_ID,
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.errors).toContainEqual({
+        field: 'action',
+        reason: "deepbook does not support 'supply'; use 'swap' or 'place_limit_order'",
+      })
+    }
+  })
+
   it('accepts a withdraw action for a non-scallop protocol', () => {
     const result = validateAction(
       validRaw({ protocol: 'deepbook', action: 'withdraw' }),
