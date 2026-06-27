@@ -11,9 +11,9 @@
     "cli": "tsx bin/agentrunner.ts"
   },
   "dependencies": {
-    "actionflow": "file:../actionflow",
     "@anthropic-ai/sdk": "^0.104.2",
-    "@mysten/sui": "^2.18.0"
+    "@mysten/sui": "^2.20.1",
+    "actionflow": "file:../actionflow"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
