@@ -57,7 +57,7 @@ This is a business rule: DeepBook is an order-book DEX, not a lending protocol. 
 
 **Rename:** `buildRecordActionPtb` → `buildAuditOnlyRecordPtb`. No behavior change — the rename signals that this function is for audit/test/dry-run use, not real DeFi execution.
 
-**Add to `BuildActionPtbResult`:**
+**Add to `BuildActionPtbResult`** (the source type in `actionflow`):
 ```ts
 | { ok: false; status: 'unsupported_action'; reason: string }
 ```
@@ -133,7 +133,11 @@ The daemon sleeps normally and continues the next cycle. It does **not** throw, 
 
 - Unknown protocol (e.g. `{ protocol: 'navi', action: 'supply' }`) → `{ ok: false, status: 'unsupported_action' }`
 - `scallop + supply` still routes to `buildScallopSupplySuiPtb` (regression guard)
-- **Regression test for removed fallback:** assert that an unsupported protocol/action combination never calls `buildAuditOnlyRecordPtb`. This can be implemented by spying on `buildAuditOnlyRecordPtb` and asserting it is not called when an unrecognised action is passed to `buildActionPtb`.
+- **Regression test for removed fallback:** assert that an unsupported protocol/action combination returns `unsupported_action` and does not return a `Transaction` (which proves no audit-only PTB was built):
+  ```ts
+  const result = buildActionPtb(unsupportedAction, ...)
+  expect(result).toEqual({ ok: false, status: 'unsupported_action', reason: expect.stringContaining('no PTB builder') })
+  ```
 - All existing tests referencing `buildRecordActionPtb` updated to `buildAuditOnlyRecordPtb`
 
 ---
