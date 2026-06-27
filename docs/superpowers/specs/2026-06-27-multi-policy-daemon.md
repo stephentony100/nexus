@@ -91,6 +91,8 @@ while (!signal.aborted) {
     log({ level: 'info', event: 'cycle_started', policyId, cycleId })
     const start = Date.now()
 
+    if (signal.aborted) break
+
     try {
       const result = await runPolicyCycle(policyOpts)
       const durationMs = Date.now() - start
@@ -109,7 +111,7 @@ while (!signal.aborted) {
           digest: result.digest,
           eventKind: result.eventKind,
           ...(isActionRecorded
-            ? { amountMist: Number(result.event.amount), protocol: result.event.protocolId }
+            ? { amountMist: result.event.amount, protocol: result.event.protocolId }
             : {}),
         })
       } else {
@@ -157,7 +159,8 @@ New `describe('runMultiPolicyDaemon', () => { ... })` block. Uses the same `vi.m
 3. **`daemon_started` includes `policyCount`** — `policyCount: 2` appears in the first log record
 4. **Backoff after any throw** — policy B throws; post-round sleep uses `backoffMs = min(intervalMs*2, maxErrorDelayMs)`; policy A (which succeeded) did not cause backoff on its own
 5. **Normal sleep after handled result** — policy A returns `upload_failed` (no throw); post-round sleep uses `intervalMs`
-6. **Abort exits cleanly** — abort after round 1 produces `daemon_stopping` + `daemon_stopped`, no second round
+6. **Abort mid-round skips remaining policies** — signal aborted after policy A's cycle; policy B's `cycle_started` is never emitted
+7. **Abort exits cleanly after full round** — abort after round 1 produces `daemon_stopping` + `daemon_stopped`, no second round
 
 ---
 
@@ -172,18 +175,28 @@ if (policyIdsEnv) {
   // Multi-policy mode
   const policyIds = policyIdsEnv.split(',').map((s) => s.trim()).filter(Boolean)
 
+  if (policyIds.length === 0) {
+    console.error('POLICYLOOP_POLICY_IDS must contain at least one policy ID')
+    process.exit(1)
+  }
+
   if (!walrusConfig) {
     console.error('WALRUS_NETWORK is required in multi-policy mode (set when POLICYLOOP_POLICY_IDS is used)')
     process.exit(1)
   }
 
+  // One uploader instance shared across all policies — WalrusClient is stateless and reusable
+  const uploader = new WalrusUploaderImpl({ config: walrusConfig, signer })
+  const scallop = readScallopConfig()
+  const ai = readAiConfig()
+
   const policies: PolicyLoopOptions[] = policyIds.map((policyId) => ({
     policyId,
     packageId,
-    walrus: { uploader: new WalrusUploaderImpl({ config: walrusConfig, signer }) },
+    walrus: { uploader },
     signer,
-    scallop: readScallopConfig(),
-    ai: readAiConfig(),
+    scallop,
+    ai,
   }))
 
   await runMultiPolicyDaemon(policies, config, controller.signal, onLog)
