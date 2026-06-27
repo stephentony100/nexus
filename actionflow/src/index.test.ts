@@ -36,15 +36,18 @@ function validState(overrides: Partial<PolicyState> = {}): PolicyState {
 
 describe('translateAction', () => {
   it('returns action and ptbBytes on a full happy path', async () => {
-    vi.mocked(extractActionGoal).mockResolvedValue({ protocol: 'deepbook', amount: 50, action: 'supply' })
-    vi.mocked(fetchPolicyState).mockResolvedValue(validState({ allowedProtocols: ['deepbook'] }))
+    vi.mocked(extractActionGoal).mockResolvedValue({ protocol: 'scallop', amount: 50, action: 'supply' })
+    vi.mocked(fetchPolicyState).mockResolvedValue(validState())
+
+    const SCALLOP_VERSION_ID = '0x' + '22'.repeat(32)
+    const SCALLOP_MARKET_ID = '0x' + '33'.repeat(32)
 
     // A real SuiJsonRpcClient is used (rather than a bare {} stub) because
     // tx.build({ client }) calls client.core.resolveTransactionPlugin(), which
     // is implemented on the real JSONRpcCoreClient but not present on a plain
     // object stub. We spy on the two network calls the resolver actually makes
     // (getObjects to resolve the shared PolicyObject reference, getMoveFunction
-    // to resolve record_action's argument types) so no real network access occurs.
+    // to resolve supply_sui's argument types) so no real network access occurs.
     const suiClient = new SuiJsonRpcClient({ url: 'http://localhost:9999', network: 'testnet' })
     vi.spyOn(suiClient.core, 'getObjects').mockResolvedValue({
       objects: [
@@ -60,26 +63,33 @@ describe('translateAction', () => {
     vi.spyOn(suiClient.core, 'getMoveFunction').mockResolvedValue({
       function: {
         packageId: PACKAGE_ID,
-        moduleName: 'policy',
-        name: 'record_action',
+        moduleName: 'scallop_adapter',
+        name: 'supply_sui',
         visibility: 'public',
         isEntry: true,
         typeParameters: [],
         parameters: [
           { reference: 'mutable', body: { $kind: 'datatype', datatype: { typeName: `${PACKAGE_ID}::policy::PolicyObject`, typeParameters: [] } } },
-          { reference: null, body: { $kind: 'vector', vector: { $kind: 'u8' } } },
           { reference: null, body: { $kind: 'u64' } },
           { reference: null, body: { $kind: 'vector', vector: { $kind: 'u8' } } },
+          { reference: 'immutable', body: { $kind: 'datatype', datatype: { typeName: `${SCALLOP_VERSION_ID}::version::Version`, typeParameters: [] } } },
+          { reference: 'mutable', body: { $kind: 'datatype', datatype: { typeName: `${SCALLOP_MARKET_ID}::market::Market`, typeParameters: [] } } },
           { reference: 'immutable', body: { $kind: 'datatype', datatype: { typeName: '0x2::clock::Clock', typeParameters: [] } } },
         ],
         returns: [],
       },
     } as never)
 
-    const result = await translateAction('deposit 50 into deepbook', {
+    const result = await translateAction('deposit 50 into scallop', {
       policyId: POLICY_ID,
       packageId: PACKAGE_ID,
       walrusBlobId: 'placeholder-blob',
+      scallop: {
+        versionObjectId: SCALLOP_VERSION_ID,
+        marketObjectId: SCALLOP_MARKET_ID,
+        versionInitialSharedVersion: 1,
+        marketInitialSharedVersion: 1,
+      },
       client: {} as Anthropic,
       suiClient,
     })

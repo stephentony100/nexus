@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildActionPtb, buildRecordActionPtb, buildScallopSupplySuiPtb } from './ptbBuilder.js'
+import { buildActionPtb, buildAuditOnlyRecordPtb, buildScallopSupplySuiPtb } from './ptbBuilder.js'
 import type { PolicyAction, ScallopConfig } from './types.js'
 
 const ACTION: PolicyAction = {
@@ -19,9 +19,9 @@ const SCALLOP_CONFIG: ScallopConfig = {
 const WALRUS_BLOB_ID = 'placeholder-blob-id'
 const PACKAGE_ID = '0x' + '11'.repeat(32)
 
-describe('buildRecordActionPtb', () => {
+describe('buildAuditOnlyRecordPtb', () => {
   it('adds exactly one moveCall targeting policy::record_action', () => {
-    const tx = buildRecordActionPtb(ACTION, WALRUS_BLOB_ID, PACKAGE_ID)
+    const tx = buildAuditOnlyRecordPtb(ACTION, WALRUS_BLOB_ID, PACKAGE_ID)
     const data = tx.getData()
     const moveCalls = data.commands.filter((c) => c.$kind === 'MoveCall')
 
@@ -35,14 +35,14 @@ describe('buildRecordActionPtb', () => {
   })
 
   it('builds to bytes without requiring a network client when given the policy object version', async () => {
-    const tx = buildRecordActionPtb(ACTION, WALRUS_BLOB_ID, PACKAGE_ID, 1)
+    const tx = buildAuditOnlyRecordPtb(ACTION, WALRUS_BLOB_ID, PACKAGE_ID, 1)
     const bytes = await tx.build({ onlyTransactionKind: true })
     expect(bytes).toBeInstanceOf(Uint8Array)
     expect(bytes.length).toBeGreaterThan(0)
   })
 
   it('throws when building without a client and without the policy object version', async () => {
-    const tx = buildRecordActionPtb(ACTION, WALRUS_BLOB_ID, PACKAGE_ID)
+    const tx = buildAuditOnlyRecordPtb(ACTION, WALRUS_BLOB_ID, PACKAGE_ID)
     await expect(tx.build({ onlyTransactionKind: true })).rejects.toThrow(/sui client/i)
   })
 })
@@ -71,7 +71,7 @@ describe('buildScallopSupplySuiPtb', () => {
 })
 
 describe('buildActionPtb', () => {
-  it('routes a scallop supply action to buildScallopSupplySuiPtb', () => {
+  it('routes scallop + supply to buildScallopSupplySuiPtb', () => {
     const result = buildActionPtb(ACTION, WALRUS_BLOB_ID, PACKAGE_ID, SCALLOP_CONFIG, 1)
     expect(result.ok).toBe(true)
     if (result.ok) {
@@ -81,7 +81,7 @@ describe('buildActionPtb', () => {
     }
   })
 
-  it('returns config_missing when a scallop supply action has no scallop config', () => {
+  it('returns config_missing when scallop + supply has no scallop config', () => {
     const result = buildActionPtb(ACTION, WALRUS_BLOB_ID, PACKAGE_ID, undefined, 1)
     expect(result).toEqual({
       ok: false,
@@ -90,25 +90,33 @@ describe('buildActionPtb', () => {
     })
   })
 
-  it('routes a non-scallop protocol to buildRecordActionPtb even without scallop config', () => {
-    const action: PolicyAction = { ...ACTION, protocol: 'deepbook' }
+  it('returns unsupported_action for an unknown protocol', () => {
+    const action: PolicyAction = { ...ACTION, protocol: 'navi' }
     const result = buildActionPtb(action, WALRUS_BLOB_ID, PACKAGE_ID, undefined, 1)
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      const moveCalls = result.tx.getData().commands.filter((c) => c.$kind === 'MoveCall')
-      if (moveCalls[0]?.$kind !== 'MoveCall') throw new Error('expected a MoveCall command')
-      expect(moveCalls[0].MoveCall.function).toBe('record_action')
-    }
+    expect(result).toEqual({
+      ok: false,
+      status: 'unsupported_action',
+      reason: 'no PTB builder for protocol "navi" action "supply"',
+    })
   })
 
-  it('routes a scallop withdraw action to buildRecordActionPtb (the routing function only branches on supply; validateAction is what rejects withdraw earlier)', () => {
+  it('returns unsupported_action for deepbook + supply (regression: must not return a Transaction)', () => {
+    const action: PolicyAction = { ...ACTION, protocol: 'deepbook' }
+    const result = buildActionPtb(action, WALRUS_BLOB_ID, PACKAGE_ID, undefined, 1)
+    expect(result).toEqual({
+      ok: false,
+      status: 'unsupported_action',
+      reason: 'no PTB builder for protocol "deepbook" action "supply"',
+    })
+  })
+
+  it('returns unsupported_action for scallop + withdraw (validator rejects this earlier, router is the safety net)', () => {
     const action: PolicyAction = { ...ACTION, action: 'withdraw' }
     const result = buildActionPtb(action, WALRUS_BLOB_ID, PACKAGE_ID, undefined, 1)
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      const moveCalls = result.tx.getData().commands.filter((c) => c.$kind === 'MoveCall')
-      if (moveCalls[0]?.$kind !== 'MoveCall') throw new Error('expected a MoveCall command')
-      expect(moveCalls[0].MoveCall.function).toBe('record_action')
-    }
+    expect(result).toEqual({
+      ok: false,
+      status: 'unsupported_action',
+      reason: 'no PTB builder for protocol "scallop" action "withdraw"',
+    })
   })
 })

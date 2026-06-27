@@ -54,7 +54,7 @@ export async function translateAction(
 export { extractActionGoal, ExtractionRefusedError } from './extractor.js'
 export { fetchPolicyState, PolicyFetchError } from './policyState.js'
 export { validateAction } from './validator.js'
-export { buildRecordActionPtb, buildScallopSupplySuiPtb, buildActionPtb } from './ptbBuilder.js'
+export { buildAuditOnlyRecordPtb, buildScallopSupplySuiPtb, buildActionPtb } from './ptbBuilder.js'
 export type { BuildActionPtbResult } from './ptbBuilder.js'
 export type { RawActionGoal } from './extractor.js'
 export type {

@@ -4,7 +4,7 @@ import type { PolicyAction, ScallopConfig } from './types.js'
 const SUI_CLOCK_OBJECT_ID = '0x6'
 const SUI_CLOCK_INITIAL_SHARED_VERSION = 1
 
-export function buildRecordActionPtb(
+export function buildAuditOnlyRecordPtb(
   action: PolicyAction,
   walrusBlobId: string,
   packageId: string,
@@ -118,5 +118,9 @@ export function buildActionPtb(
       tx: buildScallopSupplySuiPtb(action, walrusBlobId, packageId, scallop, policyInitialSharedVersion),
     }
   }
-  return { ok: true, tx: buildRecordActionPtb(action, walrusBlobId, packageId, policyInitialSharedVersion) }
+  return {
+    ok: false,
+    status: 'unsupported_action',
+    reason: `no PTB builder for protocol "${action.protocol}" action "${action.action}"`,
+  }
 }
