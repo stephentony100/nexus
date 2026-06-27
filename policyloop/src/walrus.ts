@@ -33,6 +33,7 @@ export class WalrusUploaderImpl implements WalrusUploader {
       deletable: input.deletable ?? false,
       signer: this.opts.signer,
     })
+    // blobObject is non-optional in current SDK but interface keeps blobObjectId optional for forward compatibility
     return { blobId: result.blobId, blobObjectId: result.blobObject?.id }
   }
 }
