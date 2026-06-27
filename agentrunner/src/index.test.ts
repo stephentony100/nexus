@@ -107,4 +107,20 @@ describe('runAction', () => {
     )
     expect(submitTransaction).not.toHaveBeenCalled()
   })
+
+  it('passes unsupported_action through from translateAction without calling submitTransaction', async () => {
+    vi.mocked(translateAction).mockResolvedValue({
+      ok: false,
+      status: 'unsupported_action',
+      reason: 'no PTB builder for protocol "deepbook" action "supply"',
+    })
+    const result = await runAction('supply into deepbook', {
+      policyId: POLICY_ID,
+      packageId: PACKAGE_ID,
+      walrusBlobId: 'blob',
+      signer: Ed25519Keypair.generate(),
+    })
+    expect(result).toEqual({ ok: false, status: 'unsupported_action', reason: 'no PTB builder for protocol "deepbook" action "supply"' })
+    expect(submitTransaction).not.toHaveBeenCalled()
+  })
 })
