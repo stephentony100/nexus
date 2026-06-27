@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { ScallopConfig } from 'actionflow'
+import type { WalrusClientConfig } from './walrus.js'
 
 export interface DaemonConfig {
   intervalMs: number
@@ -53,4 +54,13 @@ export function readDaemonConfig(): DaemonConfig {
   }
 
   return { intervalMs, maxErrorDelayMs }
+}
+
+export function readWalrusConfig(): WalrusClientConfig | undefined {
+  const network = process.env.WALRUS_NETWORK
+  if (!network) return undefined
+  if (network !== 'testnet' && network !== 'mainnet') {
+    throw new Error(`WALRUS_NETWORK must be 'testnet' or 'mainnet' (got: ${network})`)
+  }
+  return { network }
 }
