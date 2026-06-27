@@ -36,3 +36,4 @@ export type TranslateActionResult =
   | { ok: true; action: PolicyAction; ptbBytes: string }
   | { ok: false; errors: FieldError[] }
   | { ok: false; status: 'config_missing'; reason: string }
+  | { ok: false; status: 'unsupported_action'; reason: string }

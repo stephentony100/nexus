@@ -28,6 +28,7 @@ export type RunActionResult =
   | { ok: true; status: 'succeeded'; digest: string; eventKind: 'scallop_sui_supplied'; event: ScallopSuiSuppliedEvent }
   | { ok: false; status: 'validation_failed'; errors: FieldError[] }
   | { ok: false; status: 'config_missing'; reason: string }
+  | { ok: false; status: 'unsupported_action'; reason: string }
   | { ok: false; status: 'simulation_failed'; reason: string }
   | { ok: false; status: 'execution_aborted'; digest: string; reason: string }
   | { ok: false; status: 'event_missing'; digest: string }

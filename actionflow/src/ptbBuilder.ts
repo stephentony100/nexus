@@ -100,6 +100,7 @@ export function buildScallopSupplySuiPtb(
 export type BuildActionPtbResult =
   | { ok: true; tx: Transaction }
   | { ok: false; status: 'config_missing'; reason: string }
+  | { ok: false; status: 'unsupported_action'; reason: string }
 
 export function buildActionPtb(
   action: PolicyAction,
