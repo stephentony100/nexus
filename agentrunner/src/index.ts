@@ -2,7 +2,7 @@ import { translateAction } from 'actionflow'
 import type { TranslateActionOptions } from 'actionflow'
 import { Transaction } from '@mysten/sui/transactions'
 import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc'
-import { loadAgentKeypair } from './signer.js'
+import { createLocalSigner } from './signer.js'
 import { submitTransaction } from './submitter.js'
 import type { RunActionOptions, RunActionResult } from './types.js'
 
@@ -26,13 +26,14 @@ export async function runAction(goal: string, opts: RunActionOptions): Promise<R
     return { ok: false, status: 'validation_failed', errors: translated.errors }
   }
 
-  const signer = opts.signer ?? loadAgentKeypair()
+  const signer = opts.signer ?? createLocalSigner()
   const tx = Transaction.fromKind(translated.ptbBytes)
   tx.setSender(signer.toSuiAddress())
 
   return submitTransaction(tx, signer, suiClient)
 }
 
-export { loadAgentKeypair } from './signer.js'
+export { loadAgentKeypair, LocalKeypairSigner, createLocalSigner } from './signer.js'
+export type { TransactionSigner } from './signer.js'
 export { submitTransaction } from './submitter.js'
 export type { ActionRecordedEvent, RunActionOptions, RunActionResult, ScallopSuiSuppliedEvent } from './types.js'

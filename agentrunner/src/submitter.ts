@@ -1,6 +1,7 @@
 import type { Transaction } from '@mysten/sui/transactions'
-import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
+import type { Signer } from '@mysten/sui/cryptography'
 import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
+import type { TransactionSigner } from './signer.js'
 import type { ActionRecordedEvent, RunActionResult, ScallopSuiSuppliedEvent } from './types.js'
 
 const MAX_ATTEMPTS = 3
@@ -74,7 +75,7 @@ function parseEvent(events: { type: string; parsedJson: unknown }[]): ParsedEven
 
 export async function submitTransaction(
   tx: Transaction,
-  signer: Ed25519Keypair,
+  signer: TransactionSigner,
   suiClient: SuiJsonRpcClient,
 ): Promise<RunActionResult> {
   let prep: { bytes: Uint8Array; dryRun: Awaited<ReturnType<typeof suiClient.dryRunTransactionBlock>> }
@@ -97,7 +98,7 @@ export async function submitTransaction(
     executeResult = await withRetry(() =>
       suiClient.signAndExecuteTransaction({
         transaction: prep.bytes,
-        signer,
+        signer: signer as unknown as Signer,
         options: { showEffects: true, showEvents: true },
       }),
     )

@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Transaction } from '@mysten/sui/transactions'
-import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
+import type { TransactionSigner } from './signer.js'
 import { submitTransaction } from './submitter.js'
 
 const BYTES = new Uint8Array([1, 2, 3])
-const SIGNER = {} as Ed25519Keypair
+const SIGNER = {} as TransactionSigner
 const ACTION_RECORDED_TYPE = '0x' + '11'.repeat(32) + '::policy::ActionRecorded'
 const SCALLOP_SUI_SUPPLIED_TYPE = '0x' + '11'.repeat(32) + '::policy::ScallopSuiSupplied'
 

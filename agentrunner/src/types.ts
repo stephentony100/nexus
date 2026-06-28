@@ -1,6 +1,6 @@
 import type { SuiJsonRpcClient } from '@mysten/sui/jsonRpc'
-import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import type { FieldError, ScallopConfig, TranslateActionOptions } from 'actionflow'
+import type { TransactionSigner } from './signer.js'
 
 export interface ActionRecordedEvent {
   policyId: string
@@ -41,5 +41,5 @@ export interface RunActionOptions {
   scallop?: ScallopConfig
   client?: TranslateActionOptions['client']
   suiClient?: SuiJsonRpcClient
-  signer?: Ed25519Keypair
+  signer?: TransactionSigner
 }

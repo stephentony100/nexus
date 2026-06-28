@@ -7,3 +7,24 @@ export function loadAgentKeypair(): Ed25519Keypair {
   }
   return Ed25519Keypair.fromSecretKey(secretKey)
 }
+
+export interface TransactionSigner {
+  toSuiAddress(): string
+  signTransaction(bytes: Uint8Array): Promise<{ signature: string; bytes: string }>
+}
+
+export class LocalKeypairSigner implements TransactionSigner {
+  constructor(private readonly keypair: Ed25519Keypair) {}
+
+  toSuiAddress(): string {
+    return this.keypair.toSuiAddress()
+  }
+
+  signTransaction(bytes: Uint8Array): Promise<{ signature: string; bytes: string }> {
+    return this.keypair.signTransaction(bytes)
+  }
+}
+
+export function createLocalSigner(): LocalKeypairSigner {
+  return new LocalKeypairSigner(loadAgentKeypair())
+}
