@@ -81,7 +81,7 @@ export async function runDaemon(
           digest: result.digest,
           eventKind: result.eventKind,
           ...(isActionRecorded
-            ? { amountMist: Number(result.event.amount), protocol: result.event.protocolId }
+            ? { amountMist: result.event.amount, protocol: result.event.protocolId }
             : {}),
         })
       } else {

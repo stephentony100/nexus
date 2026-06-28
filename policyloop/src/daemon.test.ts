@@ -83,7 +83,7 @@ describe('runDaemon', () => {
       digest: 'abc123',
       eventKind: 'action_recorded',
       protocol: 'scallop',
-      amountMist: 100,
+      amountMist: '100',
     })
     expect(typeof completed.durationMs).toBe('number')
 
