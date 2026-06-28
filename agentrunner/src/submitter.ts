@@ -98,6 +98,8 @@ export async function submitTransaction(
     executeResult = await withRetry(() =>
       suiClient.signAndExecuteTransaction({
         transaction: prep.bytes,
+        // Safe: LocalKeypairSigner delegates signTransaction to the wrapped Ed25519Keypair,
+        // which is a full Signer. The SDK only calls signTransaction() internally.
         signer: signer as unknown as Signer,
         options: { showEffects: true, showEvents: true },
       }),
