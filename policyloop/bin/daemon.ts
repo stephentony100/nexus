@@ -4,7 +4,7 @@ import { WalrusUploaderImpl } from '../src/walrus.js'
 import { runDaemon, runMultiPolicyDaemon } from '../src/daemon.js'
 import type { LogRecord } from '../src/daemon.js'
 import type { PolicyLoopOptions } from '../src/index.js'
-import { loadAgentKeypair } from 'agentrunner'
+import { loadAgentKeypair, LocalKeypairSigner } from 'agentrunner'
 
 function requireEnv(name: string): string {
   const value = process.env[name]
@@ -35,7 +35,8 @@ async function main() {
   }
 
   // loadAgentKeypair reads AGENTRUNNER_PRIVATE_KEY
-  const signer = loadAgentKeypair()
+  const keypair = loadAgentKeypair()
+  const signer = new LocalKeypairSigner(keypair)
 
   const controller = new AbortController()
   process.once('SIGINT', () => controller.abort())
@@ -60,7 +61,7 @@ async function main() {
     }
 
     // One uploader instance shared across all policies — WalrusClient is stateless and reusable
-    const uploader = new WalrusUploaderImpl({ config: walrusConfig, signer })
+    const uploader = new WalrusUploaderImpl({ config: walrusConfig, signer: keypair })
     const scallop = readScallopConfig()
     const ai = readAiConfig()
 
@@ -82,7 +83,7 @@ async function main() {
     let walrusBlobId: string | undefined
 
     if (walrusConfig) {
-      walrus = { uploader: new WalrusUploaderImpl({ config: walrusConfig, signer }) }
+      walrus = { uploader: new WalrusUploaderImpl({ config: walrusConfig, signer: keypair }) }
     } else {
       walrusBlobId = requireEnv('ACTIONFLOW_WALRUS_BLOB_ID')
     }

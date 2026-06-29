@@ -1,10 +1,9 @@
 import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc'
-import type { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519'
 import type Anthropic from '@anthropic-ai/sdk'
 import { fetchPolicyState, validateAction, buildActionPtb } from 'actionflow'
 import type { ScallopConfig } from 'actionflow'
-import { loadAgentKeypair, submitTransaction } from 'agentrunner'
-import type { RunActionResult } from 'agentrunner'
+import { createLocalSigner, submitTransaction } from 'agentrunner'
+import type { RunActionResult, TransactionSigner } from 'agentrunner'
 import { checkEligibility } from './decision.js'
 import { consultDecisionAI } from './aiDecision.js'
 import type { WalrusUploader } from './walrus.js'
@@ -20,7 +19,7 @@ export interface PolicyLoopOptions {
   }
   scallop?: ScallopConfig
   suiClient?: SuiJsonRpcClient
-  signer?: Ed25519Keypair
+  signer?: TransactionSigner
   ai?: {
     client: Anthropic
     marketContext?: string
@@ -123,7 +122,7 @@ export async function runPolicyCycle(opts: PolicyLoopOptions): Promise<PolicyLoo
     return built
   }
 
-  const signer = opts.signer ?? loadAgentKeypair()
+  const signer = opts.signer ?? createLocalSigner()
   built.tx.setSender(signer.toSuiAddress())
 
   return submitTransaction(built.tx, signer, suiClient)

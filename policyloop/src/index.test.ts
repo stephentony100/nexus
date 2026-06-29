@@ -12,7 +12,7 @@ vi.mock('actionflow', () => ({
 }))
 
 vi.mock('agentrunner', () => ({
-  loadAgentKeypair: vi.fn(),
+  createLocalSigner: vi.fn(),
   submitTransaction: vi.fn(),
 }))
 
