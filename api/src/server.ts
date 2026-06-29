@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto'
 import Fastify, { type FastifyInstance } from 'fastify'
 import { runPolicyCycle } from 'policyloop'
 import type { WalrusUploader, PolicyLoopOptions } from 'policyloop'
@@ -17,10 +18,15 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
 
   const fastify = Fastify({ logger: false })
 
+  const secretBytes = Buffer.from(config.secretKey)
+
   // Auth hook — applied to all routes
   fastify.addHook('onRequest', async (request, reply) => {
-    const key = request.headers['x-api-key']
-    if (key !== config.secretKey) {
+    const raw = request.headers['x-api-key']
+    const provided = typeof raw === 'string' ? Buffer.from(raw) : Buffer.alloc(0)
+    const valid =
+      provided.length === secretBytes.length && timingSafeEqual(provided, secretBytes)
+    if (!valid) {
       return reply.status(401).send({ error: 'unauthorized' })
     }
   })
