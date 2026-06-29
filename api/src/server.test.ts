@@ -128,5 +128,6 @@ describe('HTTP API server', () => {
       headers: { 'x-api-key': TEST_KEY },
     })
     expect(res.statusCode).toBe(500)
+    expect(res.json()).toEqual({ error: 'internal_error' })
   })
 })

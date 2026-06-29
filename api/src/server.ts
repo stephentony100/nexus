@@ -18,6 +18,11 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
 
   const fastify = Fastify({ logger: false })
 
+  fastify.setErrorHandler(async (err, _request, reply) => {
+    console.error(err)
+    return reply.status(500).send({ error: 'internal_error' })
+  })
+
   const secretBytes = Buffer.from(config.secretKey)
 
   // Auth hook — applied to all routes
