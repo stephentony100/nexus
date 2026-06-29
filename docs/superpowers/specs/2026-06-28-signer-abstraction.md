@@ -41,7 +41,7 @@ export interface TransactionSigner {
 }
 ```
 
-Shape is structurally identical to the Sui SDK's own `Signer` from `@mysten/sui/cryptography`, so it passes directly to `suiClient.signAndExecuteTransaction({ signer, ... })` via TypeScript structural typing.
+Shape matches the Sui SDK's `Signer` contract (`toSuiAddress` + `signTransaction`). Note: the SDK's `Signer` is an abstract class (not a minimal interface), so structural typing is insufficient — `submitter.ts` uses `signer as unknown as Signer` at the single `signAndExecuteTransaction` call site. The cast is safe because `LocalKeypairSigner` wraps a real `Ed25519Keypair` which is a full `Signer`, and the SDK only calls `signTransaction()` internally.
 
 ---
 
