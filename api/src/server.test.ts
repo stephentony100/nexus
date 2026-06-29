@@ -22,9 +22,11 @@ const mockUploader = { uploadJson: vi.fn() }
 
 // Build server once per suite; Fastify inject does not require listen()
 const server = buildServer({
-  config: testConfig,
-  signer: mockSigner as any,
-  uploader: mockUploader as any,
+  deps: {
+    config: testConfig,
+    signer: mockSigner as any,
+    uploader: mockUploader as any,
+  },
 })
 
 describe('HTTP API server', () => {

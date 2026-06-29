@@ -1,5 +1,5 @@
 import { timingSafeEqual } from 'node:crypto'
-import Fastify, { type FastifyInstance } from 'fastify'
+import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify'
 import { runPolicyCycle } from 'policyloop'
 import type { WalrusUploader, PolicyLoopOptions } from 'policyloop'
 import type { TransactionSigner } from 'agentrunner'
@@ -13,10 +13,15 @@ export interface ServerDeps {
   ai?: PolicyLoopOptions['ai']
 }
 
-export function buildServer(deps: ServerDeps): FastifyInstance {
+export interface BuildServerOptions {
+  deps: ServerDeps
+  logger?: FastifyServerOptions['logger']
+}
+
+export function buildServer({ deps, logger = false }: BuildServerOptions): FastifyInstance {
   const { config, signer, uploader, scallop, ai } = deps
 
-  const fastify = Fastify({ logger: false })
+  const fastify = Fastify({ logger })
 
   fastify.setErrorHandler(async (err, _request, reply) => {
     console.error(err)
