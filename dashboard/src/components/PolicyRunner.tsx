@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { ApiClient, RunCycleResult } from '../api.js'
 import { runCycle } from '../api.js'
 
@@ -25,12 +25,19 @@ export function PolicyRunner({ client, policyIds }: Props) {
   const [lastResult, setLastResult] = useState<RunCycleResult | null>(null)
 
   // Sync new policyIds into state when the prop changes
-  const allIds = policyIds
-  for (const id of allIds) {
-    if (!policyStates.has(id)) {
-      policyStates.set(id, { status: 'idle' })
-    }
-  }
+  useEffect(() => {
+    setPolicyStates((prev) => {
+      const next = new Map(prev)
+      let changed = false
+      for (const id of policyIds) {
+        if (!next.has(id)) {
+          next.set(id, { status: 'idle' })
+          changed = true
+        }
+      }
+      return changed ? next : prev
+    })
+  }, [policyIds])
 
   async function handleRunCycle(policyId: string) {
     setPolicyStates((prev) => {
