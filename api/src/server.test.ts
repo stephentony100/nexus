@@ -132,4 +132,23 @@ describe('HTTP API server', () => {
     expect(res.statusCode).toBe(500)
     expect(res.json()).toEqual({ error: 'internal_error' })
   })
+
+  it('GET /live with no X-Api-Key → 200, { status: "ok" }', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/live',
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual({ status: 'ok' })
+  })
+
+  it('GET /live with wrong X-Api-Key → 200, { status: "ok" }', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/live',
+      headers: { 'x-api-key': 'wrong-key' },
+    })
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toEqual({ status: 'ok' })
+  })
 })
