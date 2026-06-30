@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'node:crypto'
 import Fastify, { type FastifyInstance, type FastifyServerOptions } from 'fastify'
+import cors from '@fastify/cors'
 import { runPolicyCycle } from 'policyloop'
 import type { WalrusUploader, PolicyLoopOptions } from 'policyloop'
 import type { TransactionSigner } from 'agentrunner'
@@ -19,7 +20,7 @@ export interface BuildServerOptions {
   logger?: FastifyServerOptions['logger']
 }
 
-export function buildServer({ deps, logger = false }: BuildServerOptions): FastifyInstance {
+export async function buildServer({ deps, logger = false }: BuildServerOptions): Promise<FastifyInstance> {
   const { config, signer, uploader, scallop, ai } = deps
 
   const fastify = Fastify({ logger })
@@ -27,6 +28,10 @@ export function buildServer({ deps, logger = false }: BuildServerOptions): Fasti
   fastify.setErrorHandler(async (err, _request, reply) => {
     console.error(err)
     return reply.status(500).send({ error: 'internal_error' })
+  })
+
+  await fastify.register(cors, {
+    origin: process.env.CORS_ORIGIN ?? '*',
   })
 
   // Public scope — no auth required

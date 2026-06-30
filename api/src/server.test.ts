@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
+import { type FastifyInstance } from 'fastify'
 import type { ApiConfig } from './config.js'
 import { runPolicyCycle } from 'policyloop'
 
@@ -20,16 +21,20 @@ const testConfig: ApiConfig = {
 const mockSigner = { toSuiAddress: vi.fn().mockReturnValue('0xagent'), signTransaction: vi.fn() }
 const mockUploader = { uploadJson: vi.fn() }
 
-// Build server once per suite; Fastify inject does not require listen()
-const server = buildServer({
-  deps: {
-    config: testConfig,
-    signer: mockSigner as any,
-    uploader: mockUploader as any,
-  },
-})
+let server: FastifyInstance
 
 describe('HTTP API server', () => {
+  beforeAll(async () => {
+    // Build server once per suite; Fastify inject does not require listen()
+    server = await buildServer({
+      deps: {
+        config: testConfig,
+        signer: mockSigner as any,
+        uploader: mockUploader as any,
+      },
+    })
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })

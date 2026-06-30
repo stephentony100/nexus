@@ -9,6 +9,7 @@
     "server": "tsx bin/server.ts"
   },
   "dependencies": {
+    "@fastify/cors": "^10.0.0",
     "fastify": "^5.3.2",
     "policyloop": "file:../policyloop",
     "agentrunner": "file:../agentrunner"

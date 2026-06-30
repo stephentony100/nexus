@@ -28,7 +28,7 @@ async function main() {
   const PORT = Number(process.env.PORT ?? 3000)
   const HOST = process.env.HOST ?? '127.0.0.1'
 
-  const server = buildServer({ deps: { config, signer, uploader, scallop, ai }, logger: true })
+  const server = await buildServer({ deps: { config, signer, uploader, scallop, ai }, logger: true })
   await server.listen({ port: PORT, host: HOST })
   console.log(`API server listening on ${HOST}:${PORT}`)
 }
