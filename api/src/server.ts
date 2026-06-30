@@ -4,6 +4,7 @@ import { runPolicyCycle } from 'policyloop'
 import type { WalrusUploader, PolicyLoopOptions } from 'policyloop'
 import type { TransactionSigner } from 'agentrunner'
 import type { ApiConfig } from './config.js'
+import pkg from '../package.json' with { type: 'json' }
 
 export interface ServerDeps {
   config: ApiConfig
@@ -49,7 +50,7 @@ export function buildServer({ deps, logger = false }: BuildServerOptions): Fasti
 
     prot.get('/health', async () => ({ status: 'ok' as const }))
 
-    prot.get('/version', async () => ({ version: '0.1.0' }))
+    prot.get('/version', async () => ({ version: pkg.version }))
 
     prot.post<{ Params: { id: string } }>('/policies/:id/run-cycle', async (request, reply) => {
       const { id } = request.params
