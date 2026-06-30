@@ -1,4 +1,4 @@
 node_modules
 dist
-src/*.js
+src/**/*.js
 vite.config.js
